@@ -1,0 +1,30 @@
+name: geospatiallib
+channels:
+  - conda-forge
+dependencies:
+  - gdal
+  - ipykernel
+  - python<3.11  # don't use the very latest version of python in case wheels aren't made for everything
+  - pip
+  - pip:
+    - azure-storage-blob
+    - black[jupyter]>=21.8
+    - deltalake
+    - flake8>=3.8
+    - torchgeo[datasets,docs,style,tests]>=0.4.0
+    - isort[colors]>=5.8
+    - jupyter
+    - mercantile>=1.2
+    - mypy>=0.900
+    - pytest>=6.1.2
+    - pytest-cov>=2.4
+    - requests
+    - requests-auth>=0.6
+    - types-requests  # mypy types for the requests package
+    - utm
+    - geopandas
+    - dask_geopandas
+    - planetary_computer
+    - pyarrow
+    - adlfs
+    - tensorboard

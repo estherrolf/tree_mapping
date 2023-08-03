@@ -14,7 +14,7 @@ import torch.nn as nn
 from lightning.pytorch import LightningModule
 from torch import Tensor
 from torch.optim.lr_scheduler import ReduceLROnPlateau
-from torchmetrics import MeanAbsoluteError, MeanSquaredError, MetricCollection
+from torchmetrics import MeanAbsoluteError, MeanSquaredError, MetricCollection, MeanMetric
 from torchvision.models._api import WeightsEnum
 
 from torchgeo.datasets import unbind_samples
@@ -22,7 +22,7 @@ from torchgeo.models import FCN, get_weight
 from torchgeo.trainers import utils
 
 
-class RegressionTask(LightningModule):  # type: ignore[misc]
+class RegressionTaskWithMask(LightningModule):  # type: ignore[misc]
     """LightningModule for training models on regression datasets.
 
     Supports any available `Timm model
@@ -117,12 +117,14 @@ class RegressionTask(LightningModule):  # type: ignore[misc]
                 "RMSE": MeanSquaredError(squared=False),
                 "MSE": MeanSquaredError(squared=True),
                 "MAE": MeanAbsoluteError(),
+                "mean_val": MeanMetric()
             },
             prefix="train_",
         )
         self.val_metrics = self.train_metrics.clone(prefix="val_")
         self.test_metrics = self.train_metrics.clone(prefix="test_")
-
+        self.pad_predictions=5
+        
     def forward(self, *args: Any, **kwargs: Any) -> Any:
         """Forward pass of the model.
 
@@ -143,13 +145,9 @@ class RegressionTask(LightningModule):  # type: ignore[misc]
         Returns:
             training loss
         """
+        pad = self.pad_predictions
         batch = args[0]
         x = batch["image"]
-#         y = batch[self.target_key]
-#         y_hat = self(x)
-
-#         if y_hat.ndim != y.ndim:
-#             y = y.unsqueeze(dim=1)
 
         y_ = batch[self.target_key]
         y_hat_ = self(x)
@@ -157,13 +155,15 @@ class RegressionTask(LightningModule):  # type: ignore[misc]
         if y_hat_.ndim != y_.ndim:
             y_ = y_.unsqueeze(dim=1)
             
+        y_hat_ = y_hat_[:,:,pad:-pad,pad:-pad]
+        y_ = y_[:,:,pad:-pad,pad:-pad]
+            
         non_nan_mask = y_ >= 0
         y_hat = y_hat_[non_nan_mask]
         y = y_[non_nan_mask]
-
+        
         loss: Tensor = self.loss(y_hat, y.to(torch.float))
 
-      #  loss: Tensor = self.loss(y_hat, y.to(torch.float))
         self.log("train_loss", loss)  # logging to TensorBoard
         self.train_metrics(y_hat, y.to(torch.float))
 
@@ -184,11 +184,16 @@ class RegressionTask(LightningModule):  # type: ignore[misc]
         batch = args[0]
         batch_idx = args[1]
         x = batch["image"]
+        pad = self.pad_predictions
+        
         y_ = batch[self.target_key]
         y_hat_ = self(x)
         
         if y_hat_.ndim != y_.ndim:
             y_ = y_.unsqueeze(dim=1)
+            
+        y_hat_ = y_hat_[:,:,pad:-pad,pad:-pad]
+        y_ = y_[:,:,pad:-pad,pad:-pad]
             
         non_nan_mask = y_ >= 0
         y_hat = y_hat_[non_nan_mask]
@@ -214,7 +219,7 @@ class RegressionTask(LightningModule):  # type: ignore[misc]
                 for key in ["image", self.target_key, "prediction"]:
                     batch[key] = batch[key].cpu()
                 sample = unbind_samples(batch)[0]
-                fig = datamodule.plot(sample)
+                fig = datamodule.plot(sample, pad=self.pad_predictions)
                 summary_writer = self.logger.experiment
                 summary_writer.add_figure(
                     f"image/{batch_idx}", fig, global_step=self.global_step
@@ -236,13 +241,8 @@ class RegressionTask(LightningModule):  # type: ignore[misc]
         """
         batch = args[0]
         x = batch["image"]
-#         y = batch[self.target_key]
-#         y_hat = self(x)
-
-#         if y_hat.ndim != y.ndim:
-#             y = y.unsqueeze(dim=1)
-
-#         loss = self.loss(y_hat, y.to(torch.float))
+        
+       # print(x.mean(axis=(0,2,3)), ' -- ', x.std(axis=(0,2,3)),)
 
         y_ = batch[self.target_key]
         y_hat_ = self(x)
@@ -253,6 +253,7 @@ class RegressionTask(LightningModule):  # type: ignore[misc]
         non_nan_mask = y_ >= 0
         y_hat = y_hat_[non_nan_mask]
         y = y_[non_nan_mask]
+        
 
         loss = self.loss(y_hat, y.to(torch.float))
         
@@ -298,7 +299,7 @@ class RegressionTask(LightningModule):  # type: ignore[misc]
         }
 
 
-class PixelwiseRegressionTask(RegressionTask):
+class PixelwiseRegressionTask(RegressionTaskWithMask):
     """LightningModule for pixelwise regression of images.
 
     Supports `Segmentation Models Pytorch
