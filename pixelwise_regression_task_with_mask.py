@@ -124,6 +124,7 @@ class RegressionTaskWithMask(LightningModule):  # type: ignore[misc]
         self.val_metrics = self.train_metrics.clone(prefix="val_")
         self.test_metrics = self.train_metrics.clone(prefix="test_")
         self.pad_predictions=5
+        self.has_context=False
         
     def forward(self, *args: Any, **kwargs: Any) -> Any:
         """Forward pass of the model.
@@ -188,7 +189,11 @@ class RegressionTaskWithMask(LightningModule):  # type: ignore[misc]
         
         y_ = batch[self.target_key]
         y_hat_ = self(x)
-        
+        if self.has_context_model:
+            with torch.no_grad:
+                context_ = self.context_model(x)
+                context_ = context_[:,:,pad:-pad,pad:-pad]
+                
         if y_hat_.ndim != y_.ndim:
             y_ = y_.unsqueeze(dim=1)
             
@@ -216,7 +221,11 @@ class RegressionTaskWithMask(LightningModule):  # type: ignore[misc]
                     y_ = y_.squeeze(dim=1)
                     y_hat_ = y_hat_.squeeze(dim=1)
                 batch["prediction"] = y_hat_
-                for key in ["image", self.target_key, "prediction"]:
+                keys = ["image", self.target_key, "prediction"]
+                if self.has_context_model:
+                    batch["context"] = context_ 
+                    keys += ["context"]
+                for key in keys:
                     batch[key] = batch[key].cpu()
                 sample = unbind_samples(batch)[0]
                 fig = datamodule.plot(sample, pad=self.pad_predictions)

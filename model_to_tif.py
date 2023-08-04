@@ -145,7 +145,7 @@ def load_model_to_task(conditions_dict,
 
     model_load_path = f"{model_dir}/{this_model_fn}"
     
-    task = pixelwise_regression_task_with_mask.PixelwiseRegressionTask(model='fcn', 
+    task = pixelwise_regression_task_with_mask.PixelwiseRegressionTaskWithMask(model='fcn', 
                                    loss='mse',
                                    learning_rate_schedule_patience=10,
                                    weights=None,

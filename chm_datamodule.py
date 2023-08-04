@@ -310,30 +310,38 @@ class ChmDataModule(GeoDataModule):
         
         
         showing_predictions = "prediction" in sample
+        showing_conext = "context" in smaple
         
         ncols = 2
         if showing_predictions:
-            ncols = 3
+            ncols += 1
             pred = sample["prediction"].squeeze(0).cpu().numpy()
             pred[nan_mask] = nan_plot_val
+            
+        if showing_context:
+            ncols += 2
+            c = sample["context"].squeeze(0).cpu().numpy()[0]
+            c[nan_mask] = nan_plot_val
             
         
         fig, axs = plt.subplots(nrows=1, ncols=ncols, figsize=(4 * ncols, 4))
         
-        if showing_predictions:
-            axs[0].imshow(
+        axs[0].imshow(
                 vis.transpose(1,2,0) / 255.,
                 interpolation="none",
             )
-            axs[1].axis("off")
-            axs[1].imshow(
+        axs[1].imshow(
                 mask,
                 vmin=0,
                 vmax=self.plt_vmax,
                 cmap='Greens',
                 interpolation="none",
             )
-            axs[1].axis("off")
+        if show_title:
+            axs[0].set_title("Img (3 channel)")
+            axs[1].set_title("Mask")
+        
+        if showing_predictions:
             axs[2].imshow(
                 pred,
                 vmin=0,
@@ -343,26 +351,28 @@ class ChmDataModule(GeoDataModule):
             )
             axs[2].axis("off")
             if show_titles:
-                axs[0].set_title("Img (3 channel)")
-                axs[1].set_title("Mask")
                 axs[2].set_title("Prediction")
 
-        else:
-            axs[0].imshow(
-                vis.transpose(1,2,0) / 255.,
+        if showing_predictions:
+            axs_c1 = axs[len(axs)-2]
+            axs_c2 = axs[len(axs)-1]
+            axs[axs_c1].imshow(
+                c[0],
+                vmin=0, 
+                vmax=1,
                 interpolation="none",
             )
-            axs[1].imshow(
-                mask,
-                vmin=0,
-                vmax=self.plt_vmax,
-                cmap='Greens',
+            axs[axs_c2].imshow(
+                c[1],
+                vmin=0, 
+                vmax=1,
                 interpolation="none",
             )
-            axs[1].axis("off")
+            axs[axs_c1].axis("off")
+            axs[axs_c2].axis("off")
             if show_titles:
-                axs[0].set_title("Img (3 channel)")
-                axs[1].set_title("Mask")
+                axs_c1.set_title("Context (dim 1)")
+                axs_c2.set_title("Context (dim 2)")
 
         if suptitle is not None:
             plt.suptitle(suptitle)
