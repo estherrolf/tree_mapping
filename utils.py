@@ -41,12 +41,13 @@ def match_input_to_target_tif(input_fn, output_fn, target_fn, verbose=False):
     if verbose: print(f'saved in {output_fn}')
     return
 
-def crop_input_to_target_tif(input_fn, output_fn, target_fn, buffer = 0, verbose=False):
+def crop_input_to_target_tif(input_fn, output_fn, target_fn, buffer = 0, verbose=False, match_res=False):
     # will not reproject!
     with rasterio.open(target_fn, "r") as f:
         left, bottom, right, top = f.bounds
         crs = f.crs.to_string()
         height, width = f.height, f.width
+        res_x, res_y = f.res
 
     left = left - buffer
     bottom = bottom - buffer
@@ -68,6 +69,10 @@ def crop_input_to_target_tif(input_fn, output_fn, target_fn, buffer = 0, verbose
         input_fn,
         output_fn
     ]
+    if match_res:
+        command.insert(10, "-tr")
+        command.insert(11, str(res_x))
+        command.insert(12, str(res_y))
     if verbose: print(command)
     subprocess.call(command)
     

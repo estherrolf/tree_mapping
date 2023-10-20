@@ -90,8 +90,12 @@ def download_sentinel_tile(sentinel_id):
 if __name__ == "__main__":
 
     
-    sentinel_ids_Karingani = ["S2A_MSIL2A_20230418T073611_R092_T36KVU_20230419T022704",
-                              "S2B_MSIL2A_20230413T073619_R092_T36KUU_20230413T131907"]
+    sentinel_ids_Karingani = [
+        "S2A_MSIL2A_20230418T073611_R092_T36KVU_20230419T022704",
+        "S2B_MSIL2A_20230413T073619_R092_T36KUU_20230413T131907",
+        "S2A_MSIL2A_20230418T073611_R092_T36JVT_20230419T032358",
+        "S2A_MSIL2A_20230418T073611_R092_T36JUT_20230419T022652"
+    ]
     
     for sentinel_id in sentinel_ids_Karingani:
         download_sentinel_tile(sentinel_id)
