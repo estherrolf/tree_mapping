@@ -42,7 +42,10 @@ def coarsen_all_lidar(processed_tif_fps_1m):
     
     for input_fn in processed_tif_fps_1m:
         site_id = input_fn.split('/')[-1].split('_')[0]
-        output_fn =  os.path.join(coarsened_chm_dir, f'{site_id}_CHM_10m.tif')
+        if not os.path.exists(os.path.join(coarsened_chm_dir, site_id)):
+            os.mkdir(os.path.join(coarsened_chm_dir, site_id))
+            
+        output_fn =  os.path.join(coarsened_chm_dir, site_id, f'{site_id}_CHM_10m.tif')
 
         coarsen_lidar(input_fn,
                       output_fn, 
