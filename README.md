@@ -11,7 +11,7 @@ Second, from the same directory, run `process_Karingani_sites.sh` which will pro
 1. aggregate lidar-derived CHM data data by site (at native 1m resolution and coarsened 10m resolution).
 2. aggregate all data products (sentinel2) and project to match the coarsened CHM data for each site. 
 
-Third, run through the steps in `prepare_tch_reference_data.ipynb` which will produce the data needed to evaluate existing tree canopy height predicted maps. [TODOS: (now) process for 2019 map and (eventually) make into a script]
+Third, run through the steps in `process_data/prepare_tch_reference_data.ipynb` which will produce the data needed to evaluate existing tree canopy height predicted maps. [TODOS: (now) process for 2019 map and (eventually) make into a script]
 
 [TODO: (eventually) DEM Layers]
 
