@@ -13,25 +13,24 @@ def get_site_lidar_tif_fn(eval_site_id,data_dir):
     return os.path.join(site_dir,tifs_this_site[0])
 
 def match_map_to_labels(eval_site_id, 
-                        compare_identifier='eth',
+                        compare_identifier,
                         data_dir = "/n/home10/erolf/tree_mapping/data",
-                        model_output_dir = "/n/home10/erolf/tree_mapping/data/output/model_output"):
+                        model_output_dir = "/n/home10/erolf/tree_mapping/data/output/model_output",
+                        appender=''):
     
     compare_identifier = compare_identifier#.lower()
 
-    # eth
-    if compare_identifier == 'eth':
-        pred_map_fn = data_dir + '/raw/global_tch_maps/ETH_GlobalCanopyHeight_10m_2020_S27E030_Map.tif'
-    else:
-        pred_map_fn = os.path.join(model_output_dir, f"{compare_identifier}/{eval_site_id}_{compare_identifier}.tif")
+    pred_map_fn = os.path.join(model_output_dir, f"{compare_identifier}/{eval_site_id}_{compare_identifier}{appender}.tif")
 
     # else print(f"compare identifier {compare_identifier} not understood")
 
-    out_dir = model_output_dir.replace('model_output', 'matched_model_output') + f'/{compare_identifier}_map'
-    out_fn = os.path.join(out_dir, f'{eval_site_id}_{compare_identifier}_map.tif')
+    matched_output_dir = model_output_dir.replace('model_output', 'matched_model_output')
+    out_dir = matched_output_dir + f'/{compare_identifier}_map'
+    out_fn = os.path.join(out_dir, f'{eval_site_id}_{compare_identifier}_map{appender}.tif')
     
-    if not os.path.exists(out_dir):
-        os.mkdir(out_dir)
+    for d in [matched_output_dir, out_dir]:
+        if not os.path.exists(out_dir):
+            os.mkdir(out_dir)
 
     
     target_fn = get_site_lidar_tif_fn(eval_site_id, data_dir)
@@ -44,7 +43,7 @@ def match_map_to_labels(eval_site_id,
     return out_fn                
     
     
-def compare_aligned_data(labels, preds, nodata_value = -9999):
+def compare_aligned_data(labels, preds, nodata_value = -9999, return_vals=False):
     
     mask = labels != nodata_value
     labels_ = labels[mask].ravel()
@@ -54,7 +53,10 @@ def compare_aligned_data(labels, preds, nodata_value = -9999):
     mae = sklearn.metrics.mean_absolute_error(labels_,preds_)
     mse = sklearn.metrics.mean_squared_error(labels_,preds_)
 
-    return {'r2':r2, 'mae':mae, 'mse':mse}
+    if return_vals:
+        return {'r2':r2, 'mae':mae, 'mse':mse, 'mask': mask, 'labels': labels, 'preds':preds}
+    else:
+        return {'r2':r2, 'mae':mae, 'mse':mse}
 
 def plot_aligned_data(labels, preds, vis=None,
                       title='title me!'):
@@ -82,17 +84,31 @@ def plot_aligned_data(labels, preds, vis=None,
 def eval_tif_at_cite(eval_site_id, compare_identifier, 
                      data_dir ="/n/home10/erolf/tree_mapping/data", 
                      model_output_dir="/n/home10/erolf/tree_mapping/data/output/model_output",
-                     plot=True, return_data=False):
-    
+                     context=False,
+                     plot=True, 
+                     return_data=False):
+        
+    # save predictions
     cropped_map_fn_this = match_map_to_labels(eval_site_id = eval_site_id, 
                                               compare_identifier = compare_identifier,
                                               data_dir=data_dir, 
-                                              model_output_dir=model_output_dir)
+                                              model_output_dir=model_output_dir) 
+    # also save context map if applicable
+    if context:
+        context_map_fn_this = match_map_to_labels(eval_site_id = eval_site_id, 
+                                              compare_identifier = compare_identifier,
+                                              data_dir=data_dir, 
+                                              model_output_dir=model_output_dir,
+                                              appender='_context')    
 
     print(cropped_map_fn_this)
     with rasterio.open(cropped_map_fn_this) as f:
         cropped_map = f.read()
         nodata_val = f.nodata
+        
+    if context:
+        with rasterio.open(context_map_fn_this) as f:
+            context_map = f.read()
         
     if (cropped_map == nodata_val).all():
         print('reference data all nans - did you check that this matches the extent of the labels?')
@@ -107,14 +123,16 @@ def eval_tif_at_cite(eval_site_id, compare_identifier,
     with rasterio.open(labels_fn) as f:
         labels = f.read()
 
-    assert labels.shape == cropped_map.shape
     
     if plot:
         plot_aligned_data(labels, cropped_map, vis=None,
                           title=f'site {eval_site_id}')
 
     if return_data:
-        return compare_aligned_data(labels, cropped_map), labels, cropped_map
+        if context:
+            return compare_aligned_data(labels, cropped_map), labels, cropped_map, context_map
+        else: 
+            return compare_aligned_data(labels, cropped_map), labels, cropped_map
     
     else: 
         return compare_aligned_data(labels, cropped_map)
