@@ -18,6 +18,6 @@ Third, run through the steps in `process_data/prepare_tch_reference_data.ipynb` 
 The notebook `tree_mapping/process_data/visualize_data_preparation` will show you what each of these steps is doing.
 
 # evaluating existing data products
-First run `prepare_tch_reference.ipynb`.
+First run `prepare_tch_reference_data.ipynb` as explained in the previous section.
 
 Then run `eval_existing_tch.ipynb`.
