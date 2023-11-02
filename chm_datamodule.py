@@ -6,13 +6,14 @@ from torchgeo.datamodules import GeoDataModule
 from torchgeo.datasets import RasterDataset, Sentinel2, stack_samples, UnionDataset
 from torchgeo.samplers import RandomBatchGeoSampler,  GridGeoSampler
 from torchgeo.samplers.constants import Units
-from torchgeo.datasets import IntersectionDataset, RasterDataset, Sentinel2, stack_samples
+from torchgeo.datasets import IntersectionDataset, RasterDataset, Sentinel2, stack_samples, AsterGDEM
 #import torchvision.transforms 
 from torchvision.transforms import Compose
 import torch.nn as nn
 from einops import rearrange
+from typing import Any
 
-
+import numpy as np
 import kornia.augmentation as K
 from torchgeo.transforms import AugmentationSequential
 from typing import Callable
@@ -36,94 +37,194 @@ sentinel_layer_codes = {"b": "B02",
                         "vis":"TCI",
                        }
 
-# based on one sample sentinel 2 image
-image_stats = {
-     'B04': {'mean': 1594.1889749204547, 'std': 258.3441421186568},
-     'B08': {'mean': 3513.7490286528578, 'std': 401.2509162414844},
-     'B02': {'mean': 1361.7406947886702, 'std': 150.90479222977774},
-     'B03': {'mean': 1605.624734241094, 'std': 177.70337752114975}
-}
+# unused
+# S2_transforms = AugmentationSequential(
+#     K.Normalize(mean=torch.tensor(0), std=torch.tensor(10000)),
+#     data_keys=["image"],
+# )
+
+# S2_transforms_image_stats = AugmentationSequential(
+#     K.Normalize(mean=torch.tensor(sentinel_layer_means), std=torch.tensor(sentinel_layer_stds)),
+#     data_keys=["image"],
+# )
 
 
-def my_transforms_4_channel_rgbnir_plus_mask(sample, img_nodata_val=-9999.):
-    
+
+# assums in order r g b nir
+# B02: (1409.4317337430034, 142.92678697740124)
+# B03: (1648.2400868817622, 169.20665915193652)
+# B04: (1650.8489919140115, 257.143099151872)
+# B08: (3513.2088906825957, 422.61985470380745)
+
+sentinel_layer_means = torch.Tensor([1650.8489919140115, 1648.2400868817622, 1409.4317337430034, 3513.2088906825957])
+sentinel_layer_stds = torch.Tensor([257.143099151872, 169.20665915193652, 142.92678697740124, 422.61985470380745])
+
+
+def transforms_4_channel_rgbnir_plus_mask_imagestats(sample, img_nodata_val=-9999., use_image_stats=True):
     img_nodata_mask = (sample['image'][:4] == img_nodata_val).any(axis=0)
-          
-    sample['image'][0] = (sample['image'][0] - image_stats["B04"]["mean"]) / image_stats["B04"]["std"]
-    sample['image'][1] = (sample['image'][1] - image_stats["B03"]["mean"]) / image_stats["B03"]["std"]
-    sample['image'][2] = (sample['image'][2] - image_stats["B02"]["mean"]) / image_stats["B02"]["std"]
-    sample['image'][3] = (sample['image'][3] - image_stats["B08"]["mean"]) / image_stats["B08"]["std"]
-    
-    # last band for label
-    label_band = len(sample['image']) - 1 
-    sample['mask'] = torch.Tensor(sample['image'][label_band]).clone()
-    
-    if len(sample['image']) > 5:
-        sample['vis'] = sample['image'][4:7]
-              
-            
-    sample['image'] = sample['image'][:4]
-    
     if img_nodata_mask.any(): print('NODATA VAL detected in imagery')
+        
+    # seventh band is the label, separate it 
+    label_band = 7
+    sample['mask'] = torch.Tensor(sample['image'][label_band:label_band+1]).clone()
+    sample['mask'][sample['mask'] > 30] = -9999.
+        
+    # last three bands are the visual image, separate them
+    if len(sample['image']) > 5:
+        sample['vis'] = sample['image'][4:7].clone()    
+    
+    # if there is context data to be had
+    if len(sample['image']) > 8:
+        sample['context'] = sample['image'][8:].clone().long() 
+        # assumes contexts is a 4 channel canopy map 
+        sample['context'] = torch.nn.functional.one_hot(sample['context']-1, num_classes=4).float()
+        sample['context'] = sample['context'].transpose(0,3).squeeze()
+        
+    # bands 0-4 are the image
+    sample['image'] = sample['image'][:4].clone() 
+    # trying to do this later
+        # divide s2 bands by 10000.
+        
+    if use_image_stats:
+        means = sentinel_layer_means
+        stds = sentinel_layer_stds
+    else:
+        means = torch.tensor([0. for x in range(len(sentinel_layer_means))])
+        stds = torch.tensor([10000. for x in range(len(sentinel_layer_means))])
+    for b in range(len(sample['image'])):
+        sample['image'][b] = (sample['image'][b].float() - means[b]) / stds[b]
+        
     sample['image'][:,img_nodata_mask] = img_nodata_val
     return sample
-    
-# def my_transforms(sample):
+
+def transforms_4_channel_rgbnir_imagestats(sample, img_nodata_val=-9999., use_image_stats=True):
+    img_nodata_mask = (sample['image'][:4] == img_nodata_val).any(axis=0)
+    if img_nodata_mask.any(): print('NODATA VAL detected in imagery')
         
-#     sample['image'][0] = (sample['image'][0] - 1400.) / 60.
-#     sample['image'][1] = (sample['image'][1] - 1600.) / 60.
-#     sample['image'][2] = (sample['image'][2] - 1600.) / 120.
-#     sample['image'][nir_band] = (sample['image'][nir_band] - 3000.) / 300.
+    # last three bands are the visual image, separate them
+    if len(sample['image']) > 5:
+        sample['vis'] = sample['image'][4:7].clone()    
     
-#     sample['vis'] = sample['image'][vis_band_start:vis_band_end]#.detach().clone()
+    # if there is context data to be had
+    if len(sample['image']) > 7:
+        sample['context'] = sample['image'][7:].clone().long() 
+        # assumes contexts is a 4 channel canopy map 
+        sample['context'] = torch.nn.functional.one_hot(sample['context']-1, num_classes=4).float()
+        sample['context'] = sample['context'].transpose(0,3).squeeze()
         
-#     # last band for label
-#     label_band = len(sample['image']) - 1 
-#     sample['mask'] = torch.Tensor(sample['image'][label_band]) #.detach().clone()
+    # bands 0-4 are the image
+    sample['image'] = sample['image'][:4].clone() 
+    # trying to do this later
+        # divide s2 bands by 10000.
+        
+    if use_image_stats:
+        means = sentinel_layer_means
+        stds = sentinel_layer_stds
+    else:
+        means = torch.tensor([0. for x in range(len(sentinel_layer_means))])
+        stds = torch.tensor([10000. for x in range(len(sentinel_layer_means))])
+    for b in range(len(sample['image'])):
+        sample['image'][b] = (sample['image'][b].float() - means[b]) / stds[b]
+        
+    sample['image'][:,img_nodata_mask] = img_nodata_val
+    return sample
+
+# def transforms_4_channel_rgbnir_plus_mask(sample, img_nodata_val=-9999., use_image_stats=False):
+#     img_nodata_mask = (sample['image'][:4] == img_nodata_val).any(axis=0)
+#     if img_nodata_mask.any(): print('NODATA VAL detected in imagery')
+        
+#     # last band is the label, separate it 
+#     label_band = 7 
+#     sample['mask'] = torch.Tensor(sample['image'][label_band]).clone()
+#     sample['mask'][sample['mask'] > 30] = -9999.
     
-#     # 4 channel image
-#     sample['remaining_data'] = sample['image'][label_band:]
-#     sample['image'] = sample['image'][:4]#.detach().clone()
+#     # last three bands are the visual image, separate them
+#     if len(sample['image']) > 5:
+#         sample['vis'] = sample['image'][4:7].clone()    
+        
+#     # if there is context data to be had
     
+#     if len(sample['image']) > 9:
+#         sample['context'] = sample['image'][8:].clone()  
+#         # assumes contexts is a 4 channel canopy map 
+#         print(sample['context'].shape)
+#         sample['context'] = torch.nn.functional(sample['context']-1, num_classes=4)
+#         print(sample['context'].shape)
+#         print(sample['context'].shape)
     
-#     print(sample['image'].mean(axis=(1,2)))
-#    # print()
-    
+#     # bands 0-4 are the image
+#     sample['image'] = sample['image'][:4].clone() 
+#     # trying to do this later
+#         # divide s2 bands by 10000.
+        
+#     if use_image_stats:
+#         means = sentinel_layer_means
+#         stds = sentinel_layer_stds
+#     else:
+#         means = torch.tensor([0. for x in range(len(sentinel_layer_means))])
+#         stds = torch.tensor([10000. for x in range(len(sentinel_layer_means))])
+#     for b in range(len(sample['image'])):
+#         sample['image'][b] = (sample['image'][b].float() - means[b]) / stds[b]
+        
+#     sample['image'][:,img_nodata_mask] = img_nodata_val
 #     return sample
+
 
 def make_site_dataset(site_id,  
                       transforms, 
-                      layers,
-                      sentinel_data_dir = "sentinel/S2A_MSIL2A_20230418T073611_R092_T36KVU_20230419T022704",
+                      layers=[],
+                      sentinel_data_dir=None,
+                      canopy_relative_dir = 'int/alos/alos_by_site_20_FNF',
                       data_dir=DATA_DIR):
     
-    sentinel_data_dir = os.path.join(data_dir,sentinel_data_dir)
-    non_img_layers = ['chm']
+    non_img_layers = ['dem','chm', 'canopy']
     img_layers = [l for l in layers if not l in non_img_layers]
-    
-    print(img_layers)
-
     s2_bands = [sentinel_layer_codes[l.lower()] for l in img_layers]
-        
+    
+    if sentinel_data_dir is None:
+        sentinel_dir_this_site = f'int/sentinel/sentinel_by_site_32736_10m/{site_id}'
+        sentinel_data_dir = os.path.join(data_dir,sentinel_dir_this_site)
+
     if "chm" in layers: 
+        # gather the sentinel data
         sentinel = Sentinel2(
             sentinel_data_dir,
             bands=s2_bands
         )
         
-        assert layers[-1] == "chm"
-        chm_dataset = RasterDataset(root=data_dir + f'/lidar/Karingani_merged_crs_10/{site_id}')
+        # gathers data
+        chm_dataset = RasterDataset(root=os.path.join(data_dir,f'int/lidar/lidar_by_site_32736_10m/{site_id}'))
+
+        # CHM will go last
         ds = IntersectionDataset(sentinel, chm_dataset, transforms=transforms)
-    
+        
+        if "canopy" in layers:            
+            ds = IntersectionDataset(sentinel, chm_dataset)
+           # ds = IntersectionDataset(chm_dataset, sentinel)
+            
+            canopy = RasterDataset(root=os.path.join(data_dir, canopy_relative_dir, site_id))
+            ds = IntersectionDataset(ds, canopy, transforms=transforms)
+        else:    
+            ds = IntersectionDataset(sentinel, chm_dataset, transforms=transforms)
+        
     else:
-        print('chm missing')
-        sentinel = Sentinel2(
-            sentinel_data_dir,
-            bands=s2_bands,
-            transforms=transforms
-        )
-        return sentinel
-    
+        if "canopy" in layers:  
+            sentinel = Sentinel2(
+                sentinel_data_dir,
+                bands=s2_bands
+            )
+        
+            canopy = RasterDataset(root=os.path.join(data_dir, canopy_relative_dir, site_id))
+            ds = IntersectionDataset(sentinel, canopy, transforms=transforms)
+        
+        else:
+            ds = Sentinel2(
+                sentinel_data_dir,
+                bands=s2_bands, 
+                transforms=transform
+        ) 
+        
+        
     return ds
 
 def get_chm_sites(sites,
@@ -132,19 +233,22 @@ def get_chm_sites(sites,
     
     assert len(sites) > 0
     
-    # first site
+    # in case there is just one site
     if len(sites) == 1:
-        transforms_0  = transforms
+        transforms_site_0  = transforms
     else:
-        transforms_0 = None
+        transforms_site_0 = None
+        
     chms = make_site_dataset(sites[0],
-                             transforms=transforms_0,
+                             transforms=transforms_site_0,
                              layers=layers, 
                              data_dir=DATA_DIR)
         
+   
     if len(sites) > 1:
-        for i, site in enumerate(sites[1:]):
-            if i == len(sites) - 2:
+        remaining_sites = sites[1:]
+        for i, site in enumerate(remaining_sites):
+            if i == len(remaining_sites) - 1:
                 transforms_this = transforms
             else:
                 transforms_this = None
@@ -161,37 +265,6 @@ def get_chm_sites(sites,
             
     return chms
 
-class _Transform(nn.Module):
-    """Version of AugmentationSequential designed for samples, not batches."""
-
-    def __init__(self, aug: nn.Module) -> None:
-        """Initialize a new _Transform instance.
-
-        Args:
-            aug: Augmentation to apply.
-        """
-        super().__init__()
-        self.aug = aug
-
-    def forward(self, sample: dict[str, Any]) -> dict[str, Any]:
-        """Apply the augmentation.
-
-        Args:
-            sample: Input sample.
-
-        Returns:
-            Augmented sample.
-        """
-        for key in ["image"]:#, "mask"]:
-            dtype = sample[key].dtype
-            # All inputs must be float
-            sample[key] = sample[key].float()
-            sample[key] = self.aug(sample[key])
-            sample[key] = sample[key].to(dtype)
-            # Kornia adds batch dimension
-            sample[key] = rearrange(sample[key], "() c h w -> c h w")
-        return sample
-    
 
 class ChmDataModule(GeoDataModule):
     def __init__(
@@ -205,7 +278,7 @@ class ChmDataModule(GeoDataModule):
         eval_pad = 5,
         length: int = 1000,
         num_workers: int = 0,
-        batch_transforms =  None,
+        batch_transforms =  transforms_4_channel_rgbnir_plus_mask_imagestats,
         **kwargs: Any,
     ) -> None:
         
@@ -219,31 +292,31 @@ class ChmDataModule(GeoDataModule):
         self.layers = layers
         self.original_patch_size = self.patch_size #* 2
         self.eval_stride = self.patch_size - 2 *eval_pad
+        print(self.eval_stride)
         self.plt_vmax = 15
+        self.plot_dem = 'dem' in layers
         
         self.train_transforms = Compose(
             [
-         #       _Transform(K.CenterCrop(patch_size)),
-                batch_transforms
+                batch_transforms,
+       #         S2_transforms
             ]
         )
         
         self.val_transforms= Compose(
             [
-         #       _Transform(K.CenterCrop(patch_size)),
-                batch_transforms
+                batch_transforms,
+         #       S2_transforms
             ]
         )
         
         self.test_transforms = Compose(
             [
-           #     _Transform(K.CenterCrop(patch_size)),
-                batch_transforms
+                batch_transforms,
+          #      S2_transforms
             ]
         )
         
-        
-
     def setup(self, stage: str) -> None:
         if stage in ["fit"]:
             self.train_dataset = get_chm_sites(sites=self.train_sites, 
@@ -310,7 +383,7 @@ class ChmDataModule(GeoDataModule):
         
         
         showing_predictions = "prediction" in sample
-        showing_conext = "context" in smaple
+        showing_context = "context" in sample
         
         ncols = 2
         if showing_predictions:
@@ -320,12 +393,18 @@ class ChmDataModule(GeoDataModule):
             
         if showing_context:
             ncols += 2
-            c = sample["context"].squeeze(0).cpu().numpy()[0]
-            c[nan_mask] = nan_plot_val
+            c = sample["context"].squeeze(0).cpu().numpy()
+            if len(c.shape) > 2:
+                c[:,nan_mask] = nan_plot_val
+            else:
+                c[nan_mask] = nan_plot_val
+        
+        if self.plot_dem:
+            ncols += 1
+            dem = sample["image"][-1].squeeze(0).cpu().numpy()
             
         
         fig, axs = plt.subplots(nrows=1, ncols=ncols, figsize=(4 * ncols, 4))
-        
         axs[0].imshow(
                 vis.transpose(1,2,0) / 255.,
                 interpolation="none",
@@ -337,7 +416,10 @@ class ChmDataModule(GeoDataModule):
                 cmap='Greens',
                 interpolation="none",
             )
-        if show_title:
+        axs[0].axis("off")
+        axs[1].axis("off")
+        
+        if show_titles:
             axs[0].set_title("Img (3 channel)")
             axs[1].set_title("Mask")
         
@@ -352,27 +434,62 @@ class ChmDataModule(GeoDataModule):
             axs[2].axis("off")
             if show_titles:
                 axs[2].set_title("Prediction")
+                
+        # if self.plot_dem:
+        #     axs_dem = axs[3]
+        #     axs_dem.imshow(
+        #         dem * dem_stats['std'] + dem_stats['mean'],
+        #         vmin=0, vmax=500,
+        #         cmap='gray',
+        #         interpolation="none",
+        #     )
+        #     axs_dem.axis("off")
+        #     if show_titles:
+        #         axs_dem.set_title("DEM (km)")
+            
 
-        if showing_predictions:
-            axs_c1 = axs[len(axs)-2]
-            axs_c2 = axs[len(axs)-1]
-            axs[axs_c1].imshow(
-                c[0],
-                vmin=0, 
-                vmax=1,
-                interpolation="none",
-            )
-            axs[axs_c2].imshow(
-                c[1],
-                vmin=0, 
-                vmax=1,
-                interpolation="none",
-            )
-            axs[axs_c1].axis("off")
-            axs[axs_c2].axis("off")
-            if show_titles:
-                axs_c1.set_title("Context (dim 1)")
-                axs_c2.set_title("Context (dim 2)")
+        if showing_context:
+            if len(c.shape) > 2:
+                axs_c1 = axs[len(axs)-2]
+                axs_c2 = axs[len(axs)-1]
+                axs_c1.imshow(
+                    c[0],
+                   vmin=0, 
+                   vmax=1,
+                    interpolation="none",
+                )
+                axs_c2.imshow(
+                    c[1],
+                   vmin=0, 
+                   vmax=1,
+                    interpolation="none",
+                )
+                axs_c1.axis("off")
+                axs_c2.axis("off")
+                if show_titles:
+                    axs_c1.set_title("Context (dim 1)")
+                    axs_c2.set_title("Context (dim 2)")
+            else:
+                
+                axs_c1 = axs[len(axs)-2]
+                axs_c2 = axs[len(axs)-1]
+                axs_c1.imshow(
+                    c,
+                   vmin=0, 
+                   vmax=1,
+                    interpolation="none",
+                )
+                axs_c2.imshow(
+                    1-c,
+                   vmin=0, 
+                   vmax=1,
+                    interpolation="none",
+                )
+                axs_c1.axis("off")
+                axs_c2.axis("off")
+                if show_titles:
+                    axs_c1.set_title("Context (dim 1)")
+                    axs_c2.set_title("Context (dim 2)")
 
         if suptitle is not None:
             plt.suptitle(suptitle)
