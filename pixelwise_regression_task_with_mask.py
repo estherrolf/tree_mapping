@@ -14,14 +14,14 @@ import torch.nn as nn
 from lightning.pytorch import LightningModule
 from torch import Tensor
 from torch.optim.lr_scheduler import ReduceLROnPlateau
-from torchmetrics import MeanAbsoluteError, MeanSquaredError, MetricCollection, MeanMetric
+from torchmetrics import MeanAbsoluteError, MeanSquaredError, MetricCollection, MeanMetric, Metric
 from torchvision.models._api import WeightsEnum
 
 from torchgeo.datasets import unbind_samples
 from torchgeo.models import FCN, get_weight
 from torchgeo.trainers import utils
-
-
+import sklearn.metrics
+        
 class RegressionTaskWithMask(LightningModule):  # type: ignore[misc]
     """LightningModule for training models on regression datasets.
 
@@ -80,7 +80,21 @@ class RegressionTaskWithMask(LightningModule):  # type: ignore[misc]
                 f"Loss type '{self.hyperparams['loss']}' is not valid. "
                 f"Currently, supports 'mse' or 'mae' loss."
             )
-
+            
+        if "context_reg" in self.hyperparams.keys():
+            self.context_reg = self.hyperparams["context_reg"]
+        else:
+            self.context_reg = 0.0
+            print(f'context reg is {self.context_reg}')
+            
+        if "avg_loss_per_pixel" in self.hyperparams.keys() and self.hyperparams["avg_loss_per_pixel"]:
+            self.avg_loss_per_pixel = True
+        else:
+            self.avg_loss_per_pixel = False
+            
+            
+    
+        
     def __init__(self, **kwargs: Any) -> None:
         """Initialize a new LightningModule for training simple regression models.
 
@@ -115,16 +129,17 @@ class RegressionTaskWithMask(LightningModule):  # type: ignore[misc]
         self.train_metrics = MetricCollection(
             {
                 "RMSE": MeanSquaredError(squared=False),
-                "MSE": MeanSquaredError(squared=True),
+                "MSE":  MeanSquaredError(squared=True),
                 "MAE": MeanAbsoluteError(),
-                "mean_val": MeanMetric()
             },
             prefix="train_",
         )
         self.val_metrics = self.train_metrics.clone(prefix="val_")
         self.test_metrics = self.train_metrics.clone(prefix="test_")
         self.pad_predictions=5
-        self.has_context=False
+        self.has_context_model=False
+        
+        
         
     def forward(self, *args: Any, **kwargs: Any) -> Any:
         """Forward pass of the model.
@@ -149,22 +164,65 @@ class RegressionTaskWithMask(LightningModule):  # type: ignore[misc]
         pad = self.pad_predictions
         batch = args[0]
         x = batch["image"]
+        if self.has_context_model:
+            c = batch["context"]
 
         y_ = batch[self.target_key]
-        y_hat_ = self(x)
+        if self.has_context_model:
+            if self.model.context_integrator_type in ['weighted_avg','attn']:
+                y_hat_, context_ = self(x, c)
+            elif self.model.context_integrator_type in ['separated_by_context', 'sigmoid_separated_by_context']:
+                (y_hat_, y_hat_by_context_), context_ = self(x, c)
+            else:
+                print(f"context integrator type {self.model.context_integrator_type} not recognized")
+        else:
+            y_hat_ = self(x)
         
         if y_hat_.ndim != y_.ndim:
             y_ = y_.unsqueeze(dim=1)
             
         y_hat_ = y_hat_[:,:,pad:-pad,pad:-pad]
         y_ = y_[:,:,pad:-pad,pad:-pad]
-            
+        
+       
+        if self.has_context_model:
+            context_ = context_[:,:,pad:-pad,pad:-pad]
+            if self.model.context_integrator_type in ['separated_by_context', 'sigmoid_separated_by_context']:
+                    y_hat_by_context_ = y_hat_by_context_[:,:,pad:-pad,pad:-pad]
+        
         non_nan_mask = y_ >= 0
         y_hat = y_hat_[non_nan_mask]
-        y = y_[non_nan_mask]
-        
-        loss: Tensor = self.loss(y_hat, y.to(torch.float))
-
+        y = y_[non_nan_mask].to(torch.float)
+        if self.has_context_model:            
+            
+            if self.model.context_integrator_type in ['weighted_avg','attn']:
+                # loss on the context-integreated output y_hat
+                loss: Tensor = self.loss(y_hat, y)
+                # penalize low entropy
+                loss += - self.context_reg * torch.mean(context_ * torch.log(context_))
+                
+            elif self.model.context_integrator_type in ['separated_by_context']:
+                loss: Tensor = 0.0
+                # each model respsonible for some part of the distribution, weighted MSE
+                # loss  = sum_k [k * MSE(yhat_k, y)]
+                for k in range(context_.shape[1]):
+                    
+                    context_k = context_[:,k].unsqueeze(1)[non_nan_mask]                    
+                    y_hat_by_context_k = y_hat_by_context_[:,k].unsqueeze(1)[non_nan_mask]
+                    
+                    loss += (context_k * (y_hat_by_context_k - y)**2).mean() #/ context_k.mean()
+                    
+            
+                    loss += self.context_reg *(context_k.mean())**2
+                
+        else:
+            # no context model
+            loss: Tensor = self.loss(y_hat, y)
+            
+        # normalize for the number of non nan values
+        if self.avg_loss_per_pixel:
+            loss = loss * non_nan_mask.sum() / torch.ones_like(non_nan_mask).sum()
+            print( non_nan_mask.sum() / torch.ones_like(non_nan_mask).sum())
         self.log("train_loss", loss)  # logging to TensorBoard
         self.train_metrics(y_hat, y.to(torch.float))
 
@@ -188,23 +246,35 @@ class RegressionTaskWithMask(LightningModule):  # type: ignore[misc]
         pad = self.pad_predictions
         
         y_ = batch[self.target_key]
-        y_hat_ = self(x)
+        
         if self.has_context_model:
-            with torch.no_grad:
-                context_ = self.context_model(x)
-                context_ = context_[:,:,pad:-pad,pad:-pad]
-                
-        if y_hat_.ndim != y_.ndim:
-            y_ = y_.unsqueeze(dim=1)
+            c = batch["context"]
+            
+        y_ = batch[self.target_key]
+        if self.has_context_model:
+            if self.model.context_integrator_type in ['weighted_avg','attn']:
+                y_hat_, context_ = self(x, c)
+            elif self.model.context_integrator_type in ['separated_by_context']:
+                (y_hat_, y_hat_by_context_), context_ = self(x, c)
+            else:
+                print(f"context integrator type {self.model.context_integrator_type} not recognized")
+        else:
+            y_hat_ = self(x)
             
         y_hat_ = y_hat_[:,:,pad:-pad,pad:-pad]
         y_ = y_[:,:,pad:-pad,pad:-pad]
+                
+        if self.has_context_model:
+            context_ = context_[:,:,pad:-pad,pad:-pad]
             
         non_nan_mask = y_ >= 0
         y_hat = y_hat_[non_nan_mask]
         y = y_[non_nan_mask]
 
         loss = self.loss(y_hat, y.to(torch.float))
+        if self.avg_loss_per_pixel:
+            loss = loss * non_nan_mask.sum() / torch.ones_like(non_nan_mask).sum()
+        
         self.log("val_loss", loss)
         self.val_metrics(y_hat, y.to(torch.float))
 
@@ -215,7 +285,7 @@ class RegressionTaskWithMask(LightningModule):  # type: ignore[misc]
             and hasattr(self.logger, "experiment")
             and hasattr(self.logger.experiment, "add_figure")
         ):
-            try: 
+            try:                 
                 datamodule = self.trainer.datamodule
                 if self.target_key == "mask":
                     y_ = y_.squeeze(dim=1)
@@ -227,13 +297,16 @@ class RegressionTaskWithMask(LightningModule):  # type: ignore[misc]
                     keys += ["context"]
                 for key in keys:
                     batch[key] = batch[key].cpu()
-                sample = unbind_samples(batch)[0]
-                fig = datamodule.plot(sample, pad=self.pad_predictions)
-                summary_writer = self.logger.experiment
-                summary_writer.add_figure(
-                    f"image/{batch_idx}", fig, global_step=self.global_step
-                )
-                plt.close()
+                for i in range(4):
+                    sample = unbind_samples(batch)[i]
+ #                   print(f"{batch_idx}-{i}-c-{sample['context'][:,32,32]}")
+                    if (sample[self.target_key] > 0).any():
+                        fig = datamodule.plot(sample, pad=self.pad_predictions)
+                        summary_writer = self.logger.experiment
+                        summary_writer.add_figure(
+                            f"image/{batch_idx}-{i}", fig, global_step=self.global_step
+                        )
+                        plt.close()
             except ValueError:
                 pass
 
@@ -250,20 +323,36 @@ class RegressionTaskWithMask(LightningModule):  # type: ignore[misc]
         """
         batch = args[0]
         x = batch["image"]
+        pad = self.pad_predictions
         
-       # print(x.mean(axis=(0,2,3)), ' -- ', x.std(axis=(0,2,3)),)
+        y_ = batch[self.target_key]
+        
+        if self.has_context_model:
+            c = batch["context"]
 
         y_ = batch[self.target_key]
-        y_hat_ = self(x)
+        if self.has_context_model:
+            if self.model.context_integrator_type in ['weighted_avg','attn']:
+                y_hat_, context_ = self(x, c)
+            elif self.model.context_integrator_type in ['separated_by_context', 'sigmoid_separated_by_context']:
+                (y_hat_, y_hat_by_context_), context_ = self(x, c)
+            else:
+                print(f"context integrator type {self.model.context_integrator_type} not recognized")
+        else:
+            y_hat_ = self(x)
         
         if y_hat_.ndim != y_.ndim:
             y_ = y_.unsqueeze(dim=1)
             
-        non_nan_mask = y_ >= 0
+        y_hat_ = y_hat_[:,:,pad:-pad,pad:-pad]
+        y_ = y_[:,:,pad:-pad,pad:-pad]
+        if self.has_context_model:
+            context = context_[:,:,pad:-pad,pad:-pad]
+            
+        non_nan_mask = y_ != -9999.
         y_hat = y_hat_[non_nan_mask]
         y = y_[non_nan_mask]
         
-
         loss = self.loss(y_hat, y.to(torch.float))
         
         self.log("test_loss", loss)
@@ -294,7 +383,7 @@ class RegressionTaskWithMask(LightningModule):  # type: ignore[misc]
             learning rate dictionary
         """
         optimizer = torch.optim.AdamW(
-            self.model.parameters(), lr=self.hyperparams["learning_rate"]
+            self.model.parameters(), lr=self.hyperparams["learning_rate"], weight_decay=self.hyperparams["learning_rate"]
         )
         return {
             "optimizer": optimizer,
