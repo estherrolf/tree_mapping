@@ -1,6 +1,10 @@
 # tree_mapping
 
-# prepare data.
+## Set up the environment.
+activate a conda environment using geospatiallib.yml. Some things will probably need to be installed separately, I haven't quite integrated everything into the yml file yet.
+
+
+## prepare data.
 First, from the `tree_mapping` directory, to download the data run the scripts `acquire_data.sh` (this will donwload the relevant sentinel tiles). You will also need to get the CHM files (from Esther or Jenia right now).
 
 Second, from the same directory, run `process_Karingani_sites.sh` which will produce the data needed for training and evaluating our models: 
