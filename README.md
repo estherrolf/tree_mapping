@@ -1,7 +1,10 @@
 # tree_mapping
 
 ## Set up the environment.
-activate a conda environment using geospatiallib.yml. Some things will probably need to be installed separately, I haven't quite integrated everything into the yml file yet.
+
+Create and activate a conda environment using 
+`conda env create -f tree_mapping.yml`
+`conda activate tree_mapping`
 
 
 ## prepare data.
