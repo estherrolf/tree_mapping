@@ -7,7 +7,7 @@ activate a conda environment using geospatiallib.yml. Some things will probably 
 ## prepare data.
 First, from the `tree_mapping` directory, to download the relevant sentinel tiles, run the scripts `acquire_data.sh`. You will also need to get download:
  - the CHM files (from Esther or Jenia right now).
- - existing tree cover predicted maps from Lang et al 2023, by downloading the relevant tiles from their [tile browser](https://langnico.github.io/globalcanopyheight/assets/tile_index.html)
+ - existing tree cover predicted maps from [Lang et al. 2023](https://www.nature.com/articles/s41559-023-02206-6), by downloading the relevant tiles from their [tile browser](https://langnico.github.io/globalcanopyheight/assets/tile_index.html).
 
 Second, from the same directory, run `process_Karingani_sites.sh` which will produce the data needed for training and evaluating our models: 
 1. aggregate lidar-derived CHM data data by site (at native 1m resolution and coarsened 10m resolution).
