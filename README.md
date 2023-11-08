@@ -18,7 +18,7 @@ Second, from the same directory, run `process_Karingani_sites.sh` which will pro
 
 Third, run through the steps in `process_data/prepare_tch_reference_data.ipynb` which will produce the data needed to evaluate existing tree canopy height predicted maps. [TODOS: (now) process for 2019 map and (eventually) make into a script]
 
-[TODO: (eventually) DEM Layers]
+[TODO: (eventually) any other layers]
 
 The notebook `tree_mapping/process_data/visualize_data_preparation` will show you what each of these steps is doing.
 
