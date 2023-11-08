@@ -43,11 +43,23 @@ def match_map_to_labels(eval_site_id,
     return out_fn                
     
     
-def compare_aligned_data(labels, preds, nodata_value = -9999, return_vals=False):
+def compare_aligned_data(labels, 
+                         preds, 
+                         nodata_value = -9999, 
+                         return_vals=False,
+                         code_preds_nodata_as=0,
+                         labels_clip = [None, 30]):
     
     mask = labels != nodata_value
     labels_ = labels[mask].ravel()
     preds_ = preds[mask].ravel()
+    
+    preds_ = np.clip(preds_, a_min= labels_clip[0], a_max= labels_clip[1])
+
+    
+    # impute any nodatas in the predictions
+    if isinstance(code_preds_nodata_as,(int, float)):
+        preds_[preds_ == nodata_value] = code_preds_nodata_as
     
     r2 = sklearn.metrics.r2_score(labels_,preds_)
     mae = sklearn.metrics.mean_absolute_error(labels_,preds_)

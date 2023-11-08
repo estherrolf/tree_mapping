@@ -31,6 +31,7 @@ def match_input_to_target_tif(input_fn,
                               verbose=False, 
                               output_type=None,
                               resampling="average",
+                              src_nodata="-9999.",
                               output_nodata="-9999."):
     """ Crops and reprojects input tn to match target fn in crs and res, possibly with a buffer of pixel_buffer pixels per edge.
     """
@@ -69,6 +70,7 @@ def match_input_to_target_tif(input_fn,
       #  "-ts", str(width), str(height),
         # "-co", "COMPRESS=LZW",
         # "-co", "BIGTIFF=YES",
+        "-srcnodata", src_nodata,
         "-dstnodata", output_nodata,
         input_fn,
         output_fn
