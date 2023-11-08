@@ -2,8 +2,10 @@
 
 ## Set up the environment.
 Create and activate a conda environment using 
-`conda env create -f tree_mapping.yml`
-`conda activate tree_mapping`
+```
+conda env create -f tree_mapping.yml
+conda activate tree_mapping
+```
 
 
 ## prepare data.
