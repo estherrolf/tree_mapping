@@ -9,7 +9,7 @@ conda activate tree_mapping
 
 
 ## prepare data.
-First, from the `tree_mapping` directory, to download the relevant sentinel tiles, run the scripts `acquire_data.sh`. You will also need to get download:
+First, from the `tree_mapping` directory, to download the relevant sentinel tiles, run the scripts `download_datasets.sh`. You will also need to get download:
  - the CHM files (from Esther or Jenia right now).
 
 For comparison to existing data products, you will need to download:
