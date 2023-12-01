@@ -30,3 +30,9 @@ The notebook `tree_mapping/process_data/visualize_data_preparation` will show yo
 First run `prepare_tch_reference_data.ipynb` as explained in the previous section.
 
 Then run `eval_existing_tch.ipynb`.
+
+## training local models
+### Local only models
+Run `python train_base_models.py config_filepath`. An example config file is given in `experiment_configs/train_baseline_local_models.yaml`
+
+To evaluate local models and visualize predictions, run through the steps in `eval_all_models.ipynb`. 
