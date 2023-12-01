@@ -35,6 +35,6 @@ Then run `eval_existing_tch.ipynb`.
 ### Local only models
 Run `python train_base_models.py config_filepath`. An example config file is given in `experiment_configs/train_baseline_local_models.yaml`
 
-[in process of checking code] use `model_to_tif.py` to generate tifs of the models in all the test sites.
+To tifs of the models in all the test sites, run `python model_to_tif.py config_filepath`.
 
 To evaluate local models and visualize predictions, run through the steps in `eval_all_models.ipynb`. 
