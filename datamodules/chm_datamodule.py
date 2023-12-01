@@ -31,14 +31,23 @@ rgbnir_codes = ["B04", "B03","B02","B08"]
 sentinel_layer_means_4_channel = [S2_stats_by_channel[channel]['mean'] for channel in rgbnir_codes]
 sentinel_layer_stds_4_channel = [S2_stats_by_channel[channel]['std'] for channel in rgbnir_codes]
 
-def transforms_4_channel_rgbnir_plus_mask_imagestats(sample, img_nodata_val=-9999., use_image_stats=True):
+def transforms_4_channel_rgbnir_plus_mask_imagestats(sample, img_nodata_val=-9999., mask_nodata_val=-9999., use_image_stats=True):
     img_nodata_mask = (sample['image'][:4] == img_nodata_val).any(axis=0)
-    if img_nodata_mask.any(): print('NODATA VAL detected in imagery')
-        
+    
     # seventh band is the label, separate it 
     label_band = 7
     sample['mask'] = torch.Tensor(sample['image'][label_band:label_band+1]).clone()
-    sample['mask'][sample['mask'] > 30] = -9999.
+    
+    # clip extreme values 
+    sample['mask'][sample['mask'] > 30] = 30.
+    # less than 0 is a NaN
+    sample['mask'][sample['mask'] < 0] = -9999.
+    
+    # make sure no imagery has nodata vals if mask has vals
+    img_nodata_mask = (sample['image'][:4] == img_nodata_val).any(axis=0)
+    mask_nodata_mask = (sample['mask'] == mask_nodata_val)[0]#.any(axis=0)
+    if img_nodata_mask[~mask_nodata_mask].any(): print('NODATA VAL detected in imagery')
+    
         
     # last three bands are the visual image, separate them
     if len(sample['image']) > 5:
@@ -67,39 +76,38 @@ def transforms_4_channel_rgbnir_plus_mask_imagestats(sample, img_nodata_val=-999
     sample['image'][:,img_nodata_mask] = img_nodata_val
     return sample
 
-# def transforms_4_channel_rgbnir_imagestats(sample, img_nodata_val=-9999., use_image_stats=True):
-#     img_nodata_mask = (sample['image'][:4] == img_nodata_val).any(axis=0)
-#     if img_nodata_mask.any(): print('NODATA VAL detected in imagery')
+def transforms_4_channel_rgbnir_no_mask_imagestats(sample, img_nodata_val=-9999.,use_image_stats=True, verbose=False):
+    img_nodata_mask = (sample['image'][:4] == img_nodata_val).any(axis=0)
         
-#     # last three bands are the visual image, separate them
-#     if len(sample['image']) > 5:
-#         sample['vis'] = sample['image'][4:7].clone()    
+    # make sure no imagery has nodata vals 
+    if  verbose and img_nodata_mask.any(): print('NODATA VAL detected in imagery')
     
-#     # if there is context data to be had
-#     if len(sample['image']) > 7:
-#         sample['context'] = sample['image'][7:].clone().long() 
-#         # assumes contexts is a 4 channel canopy map 
-#         sample['context'] = torch.nn.functional.one_hot(sample['context']-1, num_classes=4).float()
-#         sample['context'] = sample['context'].transpose(0,3).squeeze()
+    # last three bands are the visual image, separate them
+    if len(sample['image']) > 5:
+        sample['vis'] = sample['image'][4:7].clone()    
+    
+    # if there is extra context data to be had
+    if len(sample['image']) > 8:
+        sample['context'] = sample['image'][8:].clone().long() 
+        # assumes contexts is a 4 channel canopy map 
+        sample['context'] = torch.nn.functional.one_hot(sample['context']-1, num_classes=4).float()
+        sample['context'] = sample['context'].transpose(0,3).squeeze()
         
-#     # bands 0-4 are the image
-#     sample['image'] = sample['image'][:4].clone() 
-#     # trying to do this later
-#         # divide s2 bands by 10000.
-        
-#     if use_image_stats:
-#         means = sentinel_layer_means
-#         stds = sentinel_layer_stds
-#     else:
-#         means = torch.Tensor([0. for x in range(len(sentinel_layer_means))])
-#         stds = torch.Tensor([10000. for x in range(len(sentinel_layer_means))])
-#     for b in range(len(sample['image'])):
-#         sample['image'][b] = (sample['image'][b].float() - means[b]) / stds[b]
-        
-#     sample['image'][:,img_nodata_mask] = img_nodata_val
-#     return sample
+    # bands 0-4 are the image
+    sample['image'] = sample['image'][:4].clone() 
 
-
+    if use_image_stats:
+        means = sentinel_layer_means_4_channel
+        stds = sentinel_layer_stds_4_channel
+    else:
+        means = torch.Tensor([0. for x in range(len(sentinel_layer_means))])
+        stds = torch.Tensor([10000. for x in range(len(sentinel_layer_means))])
+    
+    for b in range(len(sample['image'])):
+        sample['image'][b] = (sample['image'][b].float() - means[b]) / stds[b]
+        
+    sample['image'][:,img_nodata_mask] = img_nodata_val
+    return sample
 
 def make_site_dataset(site_id,  
                       transforms, 
@@ -129,15 +137,15 @@ def make_site_dataset(site_id,
         )
         
         # gathers data
-        chm_dataset = RasterDataset(root=os.path.join(data_dir,chm_relative_dir, site_id))
+        chm_dataset = RasterDataset(paths=os.path.join(data_dir,chm_relative_dir, site_id))
       
         if "canopy" in layers:            
-            ds = IntersectionDataset(sentinel, chm_dataset)            
-            canopy = RasterDataset(root=os.path.join(data_dir, canopy_relative_dir, site_id))
-            ds = IntersectionDataset(ds, canopy, transforms=transforms)
+            dataset = IntersectionDataset(sentinel, chm_dataset)            
+            canopy = RasterDataset(paths=os.path.join(data_dir, canopy_relative_dir, site_id))
+            dataset = IntersectionDataset(ds, canopy, transforms=transforms)
             
         else:    
-            ds = IntersectionDataset(sentinel, chm_dataset, transforms=transforms)
+            dataset = IntersectionDataset(sentinel, chm_dataset, transforms=transforms)
         
     # dataset without labels
     else:
@@ -147,18 +155,17 @@ def make_site_dataset(site_id,
                 bands=s2_bands
             )
         
-            canopy = RasterDataset(root=os.path.join(data_dir, canopy_relative_dir, site_id))
-            ds = IntersectionDataset(sentinel, canopy, transforms=transforms)
+            canopy = RasterDataset(paths=os.path.join(data_dir, canopy_relative_dir, site_id))
+            dataset = IntersectionDataset(sentinel, canopy, transforms=transforms)
         
         else:
-            ds = Sentinel2(
+            dataset = Sentinel2(
                 sentinel_data_dir,
                 bands=s2_bands, 
                 transforms=transforms
         ) 
         
-        
-    return ds
+    return dataset
 
 def get_chm_sites(sites,
                   layers,
@@ -207,7 +214,7 @@ class ChmDataModule(GeoDataModule):
         layers: list[str] = ['r','g','b','nir','vis','chm'],
         batch_size: int = 8,
         patch_size: int = 64,
-        eval_pad = 5,
+        eval_pad: int = 5,
         length: int = 1000,
         num_workers: int = 0,
         batch_transforms =  transforms_4_channel_rgbnir_plus_mask_imagestats,
@@ -276,7 +283,9 @@ class ChmDataModule(GeoDataModule):
         sample: Dict[str, Any],
         show_titles: bool = True,
         suptitle: Optional[str] = None,
-        pad: Optional[int] = 0
+        pad: Optional[int] = 0,
+        zero_out_nan_vis=False,
+        nan_val = -9999.,
     ) -> plt.Figure:
         """Plot a sample from the dataset.
 
@@ -292,23 +301,27 @@ class ChmDataModule(GeoDataModule):
            Method now takes a sample dict, not a Tensor. Additionally, possible to
            show subplot titles and/or use a custom suptitle.
         """
-        mask = sample["mask"].squeeze(0).cpu().numpy()
-        vis = sample["vis"].cpu().numpy() #/ 255.
+        
+        if 'mask' in sample.keys():
+            mask = sample["mask"].squeeze(0).cpu().numpy()
+        else:
+            mask = np.zeros_like(sample["vis"])
+        vis = sample["vis"].cpu().numpy() 
         nan_plot_val = 0
         
         if pad > 0:
             vis = vis[:,pad:-pad,pad:-pad]
             mask = mask[pad:-pad,pad:-pad]
-            
-        nan_mask = mask < 0
+                        
+        nan_mask = mask == nan_val
         mask[nan_mask] = nan_plot_val
-        
-        for c in range(vis.shape[0]):
-            vis[c][nan_mask] = nan_plot_val
+         
+        if zero_out_nan_vis:
+            for c in range(vis.shape[0]):
+                vis[c][nan_mask] = nan_plot_val
         
         
         showing_predictions = "prediction" in sample
-        showing_context = "context" in sample
         
         ncols = 2
         if showing_predictions:
@@ -316,19 +329,6 @@ class ChmDataModule(GeoDataModule):
             pred = sample["prediction"].squeeze(0).cpu().numpy()
             pred[nan_mask] = nan_plot_val
             
-        if showing_context:
-            ncols += 2
-            c = sample["context"].squeeze(0).cpu().numpy()
-            if len(c.shape) > 2:
-                c[:,nan_mask] = nan_plot_val
-            else:
-                c[nan_mask] = nan_plot_val
-        
-        if self.plot_dem:
-            ncols += 1
-            dem = sample["image"][-1].squeeze(0).cpu().numpy()
-            
-        
         fig, axs = plt.subplots(nrows=1, ncols=ncols, figsize=(4 * ncols, 4))
         axs[0].imshow(
                 vis.transpose(1,2,0) / 255.,
@@ -359,62 +359,6 @@ class ChmDataModule(GeoDataModule):
             axs[2].axis("off")
             if show_titles:
                 axs[2].set_title("Prediction")
-                
-        # if self.plot_dem:
-        #     axs_dem = axs[3]
-        #     axs_dem.imshow(
-        #         dem * dem_stats['std'] + dem_stats['mean'],
-        #         vmin=0, vmax=500,
-        #         cmap='gray',
-        #         interpolation="none",
-        #     )
-        #     axs_dem.axis("off")
-        #     if show_titles:
-        #         axs_dem.set_title("DEM (km)")
-            
-
-        if showing_context:
-            if len(c.shape) > 2:
-                axs_c1 = axs[len(axs)-2]
-                axs_c2 = axs[len(axs)-1]
-                axs_c1.imshow(
-                    c[0],
-                   vmin=0, 
-                   vmax=1,
-                    interpolation="none",
-                )
-                axs_c2.imshow(
-                    c[1],
-                   vmin=0, 
-                   vmax=1,
-                    interpolation="none",
-                )
-                axs_c1.axis("off")
-                axs_c2.axis("off")
-                if show_titles:
-                    axs_c1.set_title("Context (dim 1)")
-                    axs_c2.set_title("Context (dim 2)")
-            else:
-                
-                axs_c1 = axs[len(axs)-2]
-                axs_c2 = axs[len(axs)-1]
-                axs_c1.imshow(
-                    c,
-                   vmin=0, 
-                   vmax=1,
-                    interpolation="none",
-                )
-                axs_c2.imshow(
-                    1-c,
-                   vmin=0, 
-                   vmax=1,
-                    interpolation="none",
-                )
-                axs_c1.axis("off")
-                axs_c2.axis("off")
-                if show_titles:
-                    axs_c1.set_title("Context (dim 1)")
-                    axs_c2.set_title("Context (dim 2)")
 
         if suptitle is not None:
             plt.suptitle(suptitle)
