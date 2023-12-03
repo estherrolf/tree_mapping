@@ -12,6 +12,7 @@ import rasterio
 # Code is modified from https://gist.github.com/calebrob6/438c3c1ca3078476792e1f5f2195bac5 
 
 DATA_DIR = data_dir = "../data"
+# DATA_DIR = data_dir = '../../../tambe_lab/Users/luciagordon/tree_mapping_lucia_branch/data'
 
 class ContentDispositionHeaderError(Exception):
     pass
@@ -61,9 +62,10 @@ def download_sentinel_to_directory(
     ]
 ) -> None:
     os.makedirs(output_dir, exist_ok=True)
-    
-    item = Item.from_file(stac_item_url)
-    item = planetary_computer.sign(item)
+    requests.packages.urllib3.disable_warnings()
+    response = requests.get(stac_item_url, verify = False, timeout = 10)
+    stac_item_data = response.json()
+    item = planetary_computer.sign(Item.from_dict(stac_item_data))
     
     print('donwloading the following bands: ', bands)
     for band in bands:
@@ -72,7 +74,6 @@ def download_sentinel_to_directory(
 def download_sentinel_tile(sentinel_id, bands):
     pc_collection_path = f"https://planetarycomputer.microsoft.com/api/stac/v1/collections/sentinel-2-l2a"
 
-    
     if not os.path.exists(f"{DATA_DIR}/raw/sentinel_2021"): os.mkdir(f"{DATA_DIR}/raw/sentinel_2021")
 
     sentinel_data_dir = f"{DATA_DIR}/raw/sentinel_2021/{sentinel_id}"
@@ -154,6 +155,3 @@ if __name__ == "__main__":
         
     sentinel_dirs = [f"{DATA_DIR}/raw/sentinel_2021/{x}" for x in sentinel_ids_Karingani]
     calculate_image_statistics(sentinel_dirs, bands)
-    
-
-    
