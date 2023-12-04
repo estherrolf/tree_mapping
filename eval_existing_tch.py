@@ -55,7 +55,7 @@ plt.savefig('scatter.png')
 print(sklearn.metrics.mean_absolute_error(labels_valid, preds_valid))
 print(results_plot)
 
-fig, ax = plt.subplots(layout = 'constrained')
+fig, ax = plt.subplots(layout = 'constrained', dpi = 300)
 x = np.arange(len(site_names))
 width = 0.3
 multiplier = 0
