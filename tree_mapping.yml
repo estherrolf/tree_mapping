@@ -29,3 +29,5 @@ dependencies:
     - adlfs
     - tensorboard
     - rasterio
+    - scikit-learn
+    - seaborn
