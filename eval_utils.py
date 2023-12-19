@@ -3,6 +3,20 @@ import os
 import rasterio
 import sklearn.metrics
 import utils
+from torchgeo.trainers.utils import extract_backbone
+
+def get_lowest_val_checkpoint(checkpoint_dir):
+    # find the checkpoint in checkpoint_dir with the lowest val loss
+    checkpoint_fps_lowest_val = [x for x in os.listdir(checkpoint_dir) if x.startswith('epoch=')]
+    assert len(checkpoint_fps_lowest_val) == 1
+    checkpoint_fp = os.path.join(checkpoint_dir, checkpoint_fps_lowest_val[0])
+    return checkpoint_fp
+
+def init_model_from_checkpoint(model, checkpoint_fp):
+    # instantiate model weights with backbone from ckechpoint_fp
+    _, state_dict = extract_backbone(checkpoint_fp)
+    model.load_state_dict(state_dict)
+    
 
 def get_site_lidar_tif_fn(eval_site_id,data_dir):
     site_dir = data_dir + f'/lidar/Karingani_merged_crs_10/{eval_site_id}'
@@ -66,9 +80,9 @@ def compare_aligned_data(labels,
     mse = sklearn.metrics.mean_squared_error(labels_,preds_)
 
     if return_vals:
-        return {'r2':r2, 'mae':mae, 'mse':mse, 'mask': mask, 'labels': labels, 'preds':preds}
+        return {'r2':r2, 'mae':mae, 'mse':mse, 'rmse': np.sqrt(mse), 'mask': mask, 'labels': labels, 'preds':preds}
     else:
-        return {'r2':r2, 'mae':mae, 'mse':mse}
+        return {'r2':r2, 'mae':mae, 'mse':mse, 'rmse': np.sqrt(mse)}
 
 def plot_aligned_data(labels, preds, vis=None,
                       title='title me!'):
