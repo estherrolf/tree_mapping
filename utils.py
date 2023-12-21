@@ -1,6 +1,8 @@
 import rasterio
 import subprocess
 import os
+import yaml
+
 data_dir = "/n/home10/erolf/tree_mapping/data"
 
 sentinel_layer_codes = {"b": "B02",
@@ -10,7 +12,11 @@ sentinel_layer_codes = {"b": "B02",
                         "vis":"TCI",
                        }
 
+def get_project_dir():
+    with open('project_dir.yml', 'r') as cfg_file:
+        cfg = yaml.safe_load(cfg_file)
 
+    return cfg['project_dir']
 
 # def match_input_to_target_tif(input_fn, output_fn, target_fn, verbose=False):
 #     # crops and reprojects input tn to match target fn
