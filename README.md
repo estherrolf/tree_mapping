@@ -20,14 +20,14 @@ Second, from the same directory, run `process_Karingani_sites.sh` which will pro
 1. aggregate lidar-derived CHM data data by site (at native 1m resolution and coarsened 10m resolution).
 2. aggregate all data products (sentinel2) and project to match the coarsened CHM data for each site. 
 
-Third, run `process_data/prepare_tch_reference_data.py`, which will produce the data needed to evaluate existing tree canopy height predicted maps.
+Third, run `process_data/crop_reference_maps.py`, which will produce the data needed to evaluate existing tree canopy height predicted maps.
 
 [TODO: (eventually) any other layers]
 
 The notebook `tree_mapping/process_data/visualize_data_preparation` will show you what each of these steps is doing.
 
 ## evaluating existing data products
-Run `eval_existing_tch.py`.
+Run `eval_reference_maps.py`.
 
 ## training local models
 ### Local only models
