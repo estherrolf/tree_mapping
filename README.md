@@ -7,7 +7,6 @@ conda env create -f tree_mapping.yml
 conda activate tree_mapping
 ```
 
-
 ## prepare data.
 First, from the `tree_mapping` directory, to download the relevant sentinel tiles, run the scripts `download_datasets.sh`. You will also need to get download:
  - the CHM files (from Esther or Jenia right now).
@@ -15,6 +14,8 @@ First, from the `tree_mapping` directory, to download the relevant sentinel tile
 For comparison to existing data products, you will need to download:
  - existing tree cover predicted maps from [Lang et al. 2023](https://www.nature.com/articles/s41559-023-02206-6), by downloading the relevant tiles from their [tile browser](https://langnico.github.io/globalcanopyheight/assets/tile_index.html).
  - [TODO - Lucia] tree cover maps from Glad [project page](https://glad.umd.edu/dataset/gedi).
+
+Create a config file within the tree_mapping code directory called `project_dir.yaml`. Add a single line of the form `project_dir: '../../../tambe_lab/Users/luciagordon/tree_mapping'` that provides the relative path from the code directory to the directory where you want to store data, models, results, etc. This directory should be in a location with ~50GB available.
 
 Second, from the same directory, run `process_Karingani_sites.sh` which will produce the data needed for training and evaluating our models: 
 1. aggregate lidar-derived CHM data data by site (at native 1m resolution and coarsened 10m resolution).

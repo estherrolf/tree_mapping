@@ -1,11 +1,24 @@
+# imports
 import numpy as np
 import os
 import rasterio
 import sklearn.metrics
 import utils
 
-def get_site_lidar_tif_fn(eval_site_id,data_dir):
-    site_dir = data_dir + f'/lidar/Karingani_merged_crs_10/{eval_site_id}'
+def get_lowest_val_checkpoint(checkpoint_dir):
+    # find the checkpoint in checkpoint_dir with the lowest val loss
+    checkpoint_fps_lowest_val = [x for x in os.listdir(checkpoint_dir) if x.startswith('epoch=')]
+    assert len(checkpoint_fps_lowest_val) == 1
+    checkpoint_fp = os.path.join(checkpoint_dir, checkpoint_fps_lowest_val[0])
+    return checkpoint_fp
+
+def init_model_from_checkpoint(model, checkpoint_fp):
+    # instantiate model weights with backbone from ckechpoint_fp
+    _, state_dict = extract_backbone(checkpoint_fp)
+    model.load_state_dict(state_dict)
+
+def get_site_lidar_tif_fn(eval_site_id, data_dir):
+    site_dir = f'{data_dir}/lidar/Karingani_merged_crs_10/{eval_site_id}'
     tifs_this_site = [x for x in os.listdir(site_dir) if x.endswith('.tif')]
     
     assert len(tifs_this_site) == 1
@@ -32,46 +45,43 @@ def match_map_to_labels(eval_site_id,
         if not os.path.exists(out_dir):
             os.mkdir(out_dir)
 
-    
     target_fn = get_site_lidar_tif_fn(eval_site_id, data_dir)
     
-    utils.match_input_to_target_tif(input_fn = pred_map_fn, 
-                                    output_fn = out_fn, 
-                                    target_fn = target_fn,
+    utils.match_input_to_target_tif(input_fn=pred_map_fn, 
+                                    output_fn=out_fn, 
+                                    target_fn=target_fn,
                                     verbose=False)
                      
     return out_fn                
-    
-    
+
 def compare_aligned_data(labels, 
                          preds, 
-                         nodata_value = -9999, 
+                         interval=[0, 30],
+                         nodata_value=-9999, 
                          return_vals=False,
                          code_preds_nodata_as=0,
-                         labels_clip = [None, 30]):
-    
-    mask = labels != nodata_value
-    labels_ = labels[mask].ravel()
-    preds_ = preds[mask].ravel()
-    
-    preds_ = np.clip(preds_, a_min= labels_clip[0], a_max= labels_clip[1])
+                         preds_clip=[0, 30]):
+        
+    mask = (labels != nodata_value) & (labels >= interval[0]) & (labels <= interval[1]) # select only valid values
+    masked_labels = labels[mask]
+    masked_preds = np.clip(preds[mask], a_min=preds_clip[0], a_max=preds_clip[1])
 
-    
     # impute any nodatas in the predictions
-    if isinstance(code_preds_nodata_as,(int, float)):
-        preds_[preds_ == nodata_value] = code_preds_nodata_as
+    if isinstance(code_preds_nodata_as, (int, float)):
+        masked_preds[masked_preds == nodata_value] = code_preds_nodata_as
     
-    r2 = sklearn.metrics.r2_score(labels_,preds_)
-    mae = sklearn.metrics.mean_absolute_error(labels_,preds_)
-    mse = sklearn.metrics.mean_squared_error(labels_,preds_)
+    r2 = sklearn.metrics.r2_score(masked_labels, masked_preds)
+    mae = sklearn.metrics.mean_absolute_error(masked_labels, masked_preds)
+    mse = sklearn.metrics.mean_squared_error(masked_labels, masked_preds)
+    me = np.mean(masked_preds - masked_labels)
+    errors = masked_preds - masked_labels
 
     if return_vals:
-        return {'r2':r2, 'mae':mae, 'mse':mse, 'mask': mask, 'labels': labels, 'preds':preds}
-    else:
-        return {'r2':r2, 'mae':mae, 'mse':mse}
+        return {'r2': r2, 'mae': mae, 'mse': mse, 'me': me, 'errors': errors, 'mask': mask, 'labels': labels, 'preds': preds}
+    
+    return {'r2': r2, 'mae': mae, 'mse': mse, 'me': me}
 
-def plot_aligned_data(labels, preds, vis=None,
-                      title='title me!'):
+def plot_aligned_data(labels, preds, vis=None, title='title me!'):
     
     if vis is None:
         fig, ax = plt.subplots(1,2, figsize=(12*4,6*4))

@@ -1,19 +1,17 @@
+# imports
 import rasterio
 import subprocess
 import os
 import yaml
 
-data_dir = "/n/home10/erolf/tree_mapping/data"
-
 sentinel_layer_codes = {"b": "B02",
                         "g": "B03",
                         "r": "B04",
                         "nir":"B08",
-                        "vis":"TCI",
-                       }
+                        "vis":"TCI"}
 
 def get_project_dir():
-    with open('project_dir.yml', 'r') as cfg_file:
+    with open('project_dir.yaml', 'r') as cfg_file:
         cfg = yaml.safe_load(cfg_file)
 
     return cfg['project_dir']
