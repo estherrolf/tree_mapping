@@ -17,6 +17,7 @@ vis_band_start = 4
 vis_band_end = 7
 
 DATA_DIR = "/n/home10/erolf/tree_mapping/data"
+# DATA_DIR = '../../../tambe_lab/Users/luciagordon/tree_mapping_lucia_branch/data'
 data_stats_dir = os.path.join(DATA_DIR,"int/data_stats")
 
 
