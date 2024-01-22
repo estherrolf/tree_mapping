@@ -11,6 +11,7 @@ version_id_base: '128_filters'
 data:
   split_seed: 10
   data_dir: '/n/home10/erolf/tree_mapping/data'
+  # data_dir: '../../tambe_lab/Users/luciagordon/tree_mapping_lucia_branch/data'
   num_image_channels: 4
   datamodule:
     batch_size: 128
