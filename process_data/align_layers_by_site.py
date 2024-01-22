@@ -58,6 +58,10 @@ def process_sentinel_to_Karingani_data(chm_dir, chunked_sentinel_dir, buffer=40)
             if not s2_fn.endswith('.tif'): continue
             input_fp = os.path.join(sentinel_dir, s2_fn)
             output_fp = f"{chunked_sentinel_dir}/{site_id}/{s2_fn}"
+            
+            # for all bands, output_fps to have 10m.tif resolution
+            output_fp = output_fp.replace(output_fp[-7:],"10m.tif")
+            
             match_input_to_target_tif(input_fp, 
                                       output_fp, 
                                       target_fp, 
