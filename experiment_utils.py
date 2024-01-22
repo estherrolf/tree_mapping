@@ -25,7 +25,8 @@ def get_site_splits(random_seed,
                     data_dir='data'):
     # get sites for train, validation and test set for four splits
     
-    all_sites = np.sort(os.listdir(os.path.join(data_dir,'int/lidar/lidar_by_site_32736_10m')))
+    non_hidden_dirs = [x for x in os.listdir(os.path.join(data_dir,'int/lidar/lidar_by_site_32736_10m')) if not x.startswith('.')]
+    all_sites = np.sort(non_hidden_dirs)
 
     split_orders = make_splits(len(all_sites), seed=random_seed)
     splits = {}
