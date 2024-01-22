@@ -23,7 +23,6 @@ def make_splits(num_sites, seed = 0):
 
 def get_site_splits(random_seed, 
                     data_dir='data'):
-                    # data_dir='../../../tambe_lab/Users/luciagordon/tree_mapping_lucia_branch/data'):
     '''get sites for train, validation and test set for four splits'''
     
     non_hidden_dirs = [x for x in os.listdir(os.path.join(data_dir,'int/lidar/lidar_by_site_32736_10m')) if not x.startswith('.')]
