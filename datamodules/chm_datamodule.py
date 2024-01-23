@@ -1,6 +1,8 @@
 import json
 import matplotlib.pyplot as plt
+import numpy as np
 import os
+import rasterio
 import torch
 from torchgeo.datamodules import GeoDataModule
 from torchgeo.datasets import IntersectionDataset, RasterDataset, Sentinel2, UnionDataset
@@ -32,6 +34,144 @@ rgbnir_codes = ["B04", "B03","B02","B08"]
 sentinel_layer_means_4_channel = [S2_stats_by_channel[channel]['mean'] for channel in rgbnir_codes]
 sentinel_layer_stds_4_channel = [S2_stats_by_channel[channel]['std'] for channel in rgbnir_codes]
 
+s2_12_channel_codes = ['B01', 'B02', 'B03', 'B04', 'B05', 'B06', 'B07', 'B08', 'B8A', 'B09', 'B11', 'B12']
+# as per Lang et al.
+s2_12_channel_plus_latlon_codes = s2_12_channel_codes + ['lat','sin(lon)', 'cos(lon)']
+
+sentinel_layer_means_12_channel_plus_latlon = [S2_stats_by_channel[channel]['mean'] for channel in s2_12_channel_plus_latlon_codes]
+sentinel_layer_stds_12_channel_plus_latlon = [S2_stats_by_channel[channel]['std'] for channel in s2_12_channel_plus_latlon_codes]
+
+def degree_to_radian(x):
+        return x / 360. * (2 * np.pi)
+    
+def bounds_to_latlon_encoding(bds, h,w, src_crs):
+    # convert bounds and pixel size to a lat-lon encoding per pixel, according to the encoding
+    # used in Lang et al.
+    
+    dst_crs = rasterio.crs.CRS.from_epsg('4326')
+    bds_degrees = rasterio.warp.transform_bounds(src_crs, dst_crs, *bds)
+
+    # get latitude and longitude per pixel (in degrees)
+    lat_per_pixel_vals = np.linspace(bds_degrees[3], bds_degrees[1], num=h)
+    lat_per_pixel = np.vstack([lat_per_pixel_vals for x in range(w)]).T
+    lon_per_pixel_vals = np.linspace(bds_degrees[0], bds_degrees[2], num=w)
+    lon_per_pixel = np.vstack([lon_per_pixel_vals for x in range(h)])
+    
+    latlon_encoding = np.zeros((3,h,w))
+    # lat (in degrees)
+    latlon_encoding[0] = lat_per_pixel
+    # sin(lon)
+    latlon_encoding[1] = np.sin(degree_to_radian(lon_per_pixel))
+    latlon_encoding[2] = np.cos(degree_to_radian(lon_per_pixel))
+    return latlon_encoding
+
+def transforms_12_channel_latllon_plus_mask_imagestats(sample, img_nodata_val=-9999., mask_nodata_val=-9999., use_image_stats=True):
+    # s2 bands
+    num_image_bands = len(s2_12_channel_codes)
+    num_vis_bands = 3
+    img_nodata_mask = (sample['image'][:num_image_bands] == img_nodata_val).any(axis=0)
+    
+    # seventh band is the label, separate it 
+    label_band = num_image_bands + num_vis_bands
+    sample['mask'] = torch.Tensor(sample['image'][label_band:label_band+1]).clone()
+    
+    # clip extreme values 
+    sample['mask'][sample['mask'] > 30] = 30.
+    # less than 0 is a NaN
+    sample['mask'][sample['mask'] < 0] = -9999.
+    
+    # make sure no imagery has nodata vals if mask has vals
+    img_nodata_mask = (sample['image'][:num_image_bands] == img_nodata_val).any(axis=0)
+    mask_nodata_mask = (sample['mask'] == mask_nodata_val)[0]#.any(axis=0)
+    if img_nodata_mask[~mask_nodata_mask].any(): print('NODATA VAL detected in imagery')
+    
+        
+    # these three bands are the visual image, separate them
+    if len(sample['image']) > num_image_bands+1:
+        sample['vis'] = sample['image'][num_image_bands:num_image_bands+num_vis_bands].clone()    
+    
+    # if there is extra context data to be had
+    if len(sample['image']) > num_image_bands+num_vis_bands + 1:
+        sample['context'] = sample['image'][8:].clone().long() 
+        # assumes contexts is a 4 channel canopy map 
+        sample['context'] = torch.nn.functional.one_hot(sample['context']-1, num_classes=4).float()
+        sample['context'] = sample['context'].transpose(0,3).squeeze()
+        
+    # bands 0-11 are the image
+    sample['image'] = sample['image'][:num_image_bands].clone() 
+    
+    # append the latlon to the sample
+    bbox = sample['bbox']
+    bds = [bbox.minx, bbox.miny, bbox.maxx, bbox.maxy]   
+    h,w = sample['image'].shape[1], sample['image'].shape[2]
+    src_crs = sample['crs']
+    
+    latlon_layers = bounds_to_latlon_encoding(bds, h,w, src_crs)
+    sample['image'] = torch.vstack((sample['image'], torch.Tensor(latlon_layers)))    
+    
+    if use_image_stats:
+        means = sentinel_layer_means_12_channel_plus_latlon
+        stds = sentinel_layer_stds_12_channel_plus_latlon
+    else:
+        # NOTE: this won't make sense for the latlon values...
+        means = torch.Tensor([0. for x in range(len(sentinel_layer_means))])
+        stds = torch.Tensor([10000. for x in range(len(sentinel_layer_means))])
+    
+    for b in range(len(sample['image'])):
+        sample['image'][b] = (sample['image'][b].float() - means[b]) / stds[b]
+        
+    sample['image'][:,img_nodata_mask] = img_nodata_val
+    return sample
+
+def transforms_12_channel_plus_mask_imagestats(sample, img_nodata_val=-9999., mask_nodata_val=-9999., use_image_stats=True):
+    # s2 bands
+    num_image_bands = len(s2_12_channel_codes)
+    num_vis_bands = 3
+    img_nodata_mask = (sample['image'][:num_image_bands] == img_nodata_val).any(axis=0)
+    
+    # seventh band is the label, separate it 
+    label_band = num_image_bands + num_vis_bands
+    sample['mask'] = torch.Tensor(sample['image'][label_band:label_band+1]).clone()
+    
+    # clip extreme values 
+    sample['mask'][sample['mask'] > 30] = 30.
+    # less than 0 is a NaN
+    sample['mask'][sample['mask'] < 0] = -9999.
+    
+    # make sure no imagery has nodata vals if mask has vals
+    img_nodata_mask = (sample['image'][:num_image_bands] == img_nodata_val).any(axis=0)
+    mask_nodata_mask = (sample['mask'] == mask_nodata_val)[0]#.any(axis=0)
+    if img_nodata_mask[~mask_nodata_mask].any(): print('NODATA VAL detected in imagery')
+    
+        
+    # these three bands are the visual image, separate them
+    if len(sample['image']) > num_image_bands+1:
+        sample['vis'] = sample['image'][num_image_bands:num_image_bands+num_vis_bands].clone()    
+    
+    # if there is extra context data to be had
+    if len(sample['image']) > num_image_bands+num_vis_bands + 1:
+        sample['context'] = sample['image'][8:].clone().long() 
+        # assumes contexts is a 4 channel canopy map 
+        sample['context'] = torch.nn.functional.one_hot(sample['context']-1, num_classes=4).float()
+        sample['context'] = sample['context'].transpose(0,3).squeeze()
+        
+    # bands 0-11 are the image
+    sample['image'] = sample['image'][:num_image_bands].clone() 
+    
+    if use_image_stats:
+        means = sentinel_layer_means_12_channel_plus_latlon
+        stds = sentinel_layer_stds_12_channel_plus_latlon
+    else:
+        # NOTE: this won't make sense for the latlon values...
+        means = torch.Tensor([0. for x in range(len(sentinel_layer_means))])
+        stds = torch.Tensor([10000. for x in range(len(sentinel_layer_means))])
+    
+    for b in range(len(sample['image'])):
+        sample['image'][b] = (sample['image'][b].float() - means[b]) / stds[b]
+        
+    sample['image'][:,img_nodata_mask] = img_nodata_val
+    return sample
+
 def transforms_4_channel_rgbnir_plus_mask_imagestats(sample, img_nodata_val=-9999., mask_nodata_val=-9999., use_image_stats=True):
     img_nodata_mask = (sample['image'][:4] == img_nodata_val).any(axis=0)
     
@@ -50,7 +190,7 @@ def transforms_4_channel_rgbnir_plus_mask_imagestats(sample, img_nodata_val=-999
     if img_nodata_mask[~mask_nodata_mask].any(): print('NODATA VAL detected in imagery')
     
         
-    # last three bands are the visual image, separate them
+    # these three bands are the visual image, separate them
     if len(sample['image']) > 5:
         sample['vis'] = sample['image'][4:7].clone()    
     
@@ -117,6 +257,7 @@ def make_site_dataset(site_id,
                       chm_relative_dir="int/lidar/lidar_by_site_32736_10m",
                       sentinel_relative_dir="int/sentinel/sentinel_by_site_32736_10m",
                       canopy_relative_dir = 'int/alos/alos_by_site_20_FNF',
+                      
                      ):
     '''
     Returns a dataset with layers in this order: 
@@ -125,10 +266,16 @@ def make_site_dataset(site_id,
     
     non_img_layers = ['dem','chm', 'canopy']
     img_layers = [l for l in layers if not l in non_img_layers]
-    s2_bands = [sentinel_layer_codes[l.lower()] for l in img_layers]
+    s2_bands = []
+    for l in img_layers:
+        # convert e.g. nir to the S2 code, keep e.g. B02 as is
+        if l.lower() in ['r','g','b','nir','vis']: 
+            s2_bands.append(sentinel_layer_codes[l.lower()])
+        else:
+            s2_bands.append(l)
+                                         
     
     sentinel_data_dir = os.path.join(data_dir,sentinel_relative_dir, site_id)
-
     # dataset with chm labels
     if "chm" in layers: 
         # gather the sentinel data
