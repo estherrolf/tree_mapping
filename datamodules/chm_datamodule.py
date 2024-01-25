@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import os
 import rasterio
+import sys
 import torch
 from torchgeo.datamodules import GeoDataModule
 from torchgeo.datasets import IntersectionDataset, RasterDataset, Sentinel2, UnionDataset
@@ -11,26 +12,26 @@ from torchgeo.samplers.constants import Units
 from torchvision.transforms import Compose
 from typing import Any, Optional, Dict
 
+sys.path.insert(0, '') # necessary since utils is outside the datamodules folder
+from utils import get_project_dir
+
 nir_band = 3
 label_band = 7
 vis_band_start = 4
 vis_band_end = 7
 
-DATA_DIR = "/n/home10/erolf/tree_mapping/data"
-# DATA_DIR = '../../../tambe_lab/Users/luciagordon/tree_mapping_lucia_branch/data'
-data_stats_dir = os.path.join(DATA_DIR,"int/data_stats")
+project_dir = get_project_dir()
+data_stats_dir = f'{project_dir}/data/int/data_stats'
 
+S2_stats_by_channel = json.load(open(f'{data_stats_dir}/S2_stats_by_channel.json'))
 
-S2_stats_by_channel = json.load(open(os.path.join(data_stats_dir, "S2_stats_by_channel.json")))
+sentinel_layer_codes = {'b': 'B02',
+                        'g': 'B03',
+                        'r': 'B04',
+                        'nir':'B08',
+                        'vis':'TCI'}
 
-sentinel_layer_codes = {"b": "B02",
-                        "g": "B03",
-                        "r": "B04",
-                        "nir":"B08",
-                        "vis":"TCI",
-                       }
-
-rgbnir_codes = ["B04", "B03","B02","B08"]
+rgbnir_codes = ['B04', 'B03','B02','B08']
 sentinel_layer_means_4_channel = [S2_stats_by_channel[channel]['mean'] for channel in rgbnir_codes]
 sentinel_layer_stds_4_channel = [S2_stats_by_channel[channel]['std'] for channel in rgbnir_codes]
 
@@ -188,7 +189,6 @@ def transforms_4_channel_rgbnir_plus_mask_imagestats(sample, img_nodata_val=-999
     img_nodata_mask = (sample['image'][:4] == img_nodata_val).any(axis=0)
     mask_nodata_mask = (sample['mask'] == mask_nodata_val)[0]#.any(axis=0)
     if img_nodata_mask[~mask_nodata_mask].any(): print('NODATA VAL detected in imagery')
-    
         
     # these three bands are the visual image, separate them
     if len(sample['image']) > 5:
@@ -253,12 +253,19 @@ def transforms_4_channel_rgbnir_no_mask_imagestats(sample, img_nodata_val=-9999.
 def make_site_dataset(site_id,  
                       transforms, 
                       layers=[],
+<<<<<<< Updated upstream
                       data_dir=DATA_DIR,
                       chm_relative_dir="int/lidar/lidar_by_site_32736_10m",
                       sentinel_relative_dir="int/sentinel/sentinel_by_site_32736_10m",
                       canopy_relative_dir = 'int/alos/alos_by_site_20_FNF',
                       
                      ):
+=======
+                      data_dir=f'{project_dir}/data',
+                      chm_relative_dir='int/lidar/lidar_by_site_32736_10m',
+                      sentinel_relative_dir='int/sentinel/sentinel_by_site_32736_10m',
+                      canopy_relative_dir = 'int/alos/alos_by_site_20_FNF'):
+>>>>>>> Stashed changes
     '''
     Returns a dataset with layers in this order: 
         sentinel, then CHM (if requested), then context data (e.g. canopy -- if requested).
@@ -277,7 +284,7 @@ def make_site_dataset(site_id,
     
     sentinel_data_dir = os.path.join(data_dir,sentinel_relative_dir, site_id)
     # dataset with chm labels
-    if "chm" in layers: 
+    if 'chm' in layers: 
         # gather the sentinel data
         sentinel = Sentinel2(
             sentinel_data_dir,
@@ -287,7 +294,7 @@ def make_site_dataset(site_id,
         # gathers data
         chm_dataset = RasterDataset(paths=os.path.join(data_dir,chm_relative_dir, site_id))
       
-        if "canopy" in layers:            
+        if 'canopy' in layers:            
             dataset = IntersectionDataset(sentinel, chm_dataset)            
             canopy = RasterDataset(paths=os.path.join(data_dir, canopy_relative_dir, site_id))
             dataset = IntersectionDataset(ds, canopy, transforms=transforms)
@@ -297,7 +304,7 @@ def make_site_dataset(site_id,
         
     # dataset without labels
     else:
-        if "canopy" in layers:  
+        if 'canopy' in layers:  
             sentinel = Sentinel2(
                 sentinel_data_dir,
                 bands=s2_bands
@@ -329,7 +336,7 @@ def get_chm_sites(sites,
     chms = make_site_dataset(sites[0],
                              transforms=transforms_site_0,
                              layers=layers, 
-                             data_dir=DATA_DIR)
+                             data_dir=f'{project_dir}/data')
         
    
     if len(sites) > 1:
@@ -343,8 +350,7 @@ def get_chm_sites(sites,
             chm_this = make_site_dataset(site,
                                          transforms=None,
                                          layers=layers, 
-                                         data_dir=DATA_DIR,
-                                        )
+                                         data_dir=f'{project_dir}/data')
             
             chms = UnionDataset(chms, 
                                 chm_this,
@@ -401,7 +407,7 @@ class ChmDataModule(GeoDataModule):
         )
         
     def setup(self, stage: str) -> None:
-        if stage in ["fit"]:
+        if stage in ['fit']:
             self.train_dataset = get_chm_sites(
                 sites=self.train_sites, layers=self.layers, transforms = self.train_transforms, **self.kwargs
             )
@@ -411,14 +417,14 @@ class ChmDataModule(GeoDataModule):
                 self.batch_size,
                 self.length,
             )
-        if stage in ["fit", "validate"]:
+        if stage in ['fit', 'validate']:
             self.val_dataset = get_chm_sites(
                 sites=self.val_sites, layers=self.layers, transforms = self.val_transforms, **self.kwargs
             )
             self.val_sampler = GridGeoSampler(
                 self.val_dataset, self.original_patch_size, self.eval_stride, units=Units.PIXELS
             )
-        if stage in ["test"]:
+        if stage in ['test']:
             self.test_dataset = get_chm_sites(
                 sites=self.test_sites, layers=self.layers, transforms = self.test_transforms, **self.kwargs
             )
@@ -435,7 +441,7 @@ class ChmDataModule(GeoDataModule):
         zero_out_nan_vis=False,
         nan_val = -9999.,
     ) -> plt.Figure:
-        """Plot a sample from the dataset.
+        '''Plot a sample from the dataset.
 
         Args:
             sample: a sample returned by :meth:`RasterDataset.__getitem__`
@@ -448,13 +454,13 @@ class ChmDataModule(GeoDataModule):
         .. versionchanged:: 0.3
            Method now takes a sample dict, not a Tensor. Additionally, possible to
            show subplot titles and/or use a custom suptitle.
-        """
+        '''
         
         if 'mask' in sample.keys():
-            mask = sample["mask"].squeeze(0).cpu().numpy()
+            mask = sample['mask'].squeeze(0).cpu().numpy()
         else:
-            mask = np.zeros_like(sample["vis"])
-        vis = sample["vis"].cpu().numpy() 
+            mask = np.zeros_like(sample['vis'])
+        vis = sample['vis'].cpu().numpy() 
         nan_plot_val = 0
         
         if pad > 0:
@@ -469,32 +475,32 @@ class ChmDataModule(GeoDataModule):
                 vis[c][nan_mask] = nan_plot_val
         
         
-        showing_predictions = "prediction" in sample
+        showing_predictions = 'prediction' in sample
         
         ncols = 2
         if showing_predictions:
             ncols += 1
-            pred = sample["prediction"].squeeze(0).cpu().numpy()
+            pred = sample['prediction'].squeeze(0).cpu().numpy()
             pred[nan_mask] = nan_plot_val
             
         fig, axs = plt.subplots(nrows=1, ncols=ncols, figsize=(4 * ncols, 4))
         axs[0].imshow(
                 vis.transpose(1,2,0) / 255.,
-                interpolation="none",
+                interpolation='none',
             )
         axs[1].imshow(
                 mask,
                 vmin=0,
                 vmax=self.plt_vmax,
                 cmap='Greens',
-                interpolation="none",
+                interpolation='none',
             )
-        axs[0].axis("off")
-        axs[1].axis("off")
+        axs[0].axis('off')
+        axs[1].axis('off')
         
         if show_titles:
-            axs[0].set_title("Img (3 channel)")
-            axs[1].set_title("Mask")
+            axs[0].set_title('Img (3 channel)')
+            axs[1].set_title('Mask')
         
         if showing_predictions:
             axs[2].imshow(
@@ -502,11 +508,11 @@ class ChmDataModule(GeoDataModule):
                 vmin=0,
                 vmax=self.plt_vmax,
                 cmap='Greens',
-                interpolation="none",
+                interpolation='none',
             )
-            axs[2].axis("off")
+            axs[2].axis('off')
             if show_titles:
-                axs[2].set_title("Prediction")
+                axs[2].set_title('Prediction')
 
         if suptitle is not None:
             plt.suptitle(suptitle)

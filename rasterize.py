@@ -9,14 +9,16 @@ import rasterio
 gdal.UseExceptions()
 
 # rasterize shapefile
-vector = gpd.read_file('../KaGR_Riv_Updated_20230326_UTM36s/KaGR_Riv_Updated_20230326_UTM36s.shp')
+vector_path = '../KaGR_Riv_Updated_20230326_UTM36s/KaGR_Riv_Updated_20230326_UTM36s.shp'
+raster_name = 'river_raster'
+vector = gpd.read_file(vector_path)
 bounds = vector.total_bounds
 resolution = 10 # number of meters covered by each pixel in the TIFF
 width = int((bounds[2] - bounds[0]) / resolution)
 height = int((bounds[3] - bounds[1]) / resolution)
 transform = rasterio.transform.from_origin(bounds[0], bounds[3], resolution, resolution)
 
-out_tiff = 'river_raster.tiff'
+out_tiff = f'{raster_name}.tiff'
 with rasterio.open(out_tiff,
                    'w',
                    driver='GTiff',
@@ -36,7 +38,7 @@ with rasterio.open(out_tiff,
     dst.write_band(1, burned) # write the rasterized shapefile to the GeoTIFF
 
 # convert raster to array
-raster = gdal.Open('river_raster.tiff')
+raster = gdal.Open(f'{raster_name}.tiff')
 num_rows = raster.RasterYSize
 num_cols = raster.RasterXSize
 array = ((raster.GetRasterBand(1)).ReadAsArray(0, 0, num_cols, num_rows).astype(np.float32)) # 0 = not river, 255 = river
@@ -52,5 +54,5 @@ for row in range(array.shape[0]):
 plt.figure(dpi=300)
 plt.imshow(array) # plot the array of pixel values as an image
 plt.axis('off') # remove axes        
-plt.savefig('river_raster.png', bbox_inches='tight', pad_inches=0)
+plt.savefig(f'{raster_name}.png', bbox_inches='tight', pad_inches=0)
 plt.close() # close the image to save memory

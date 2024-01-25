@@ -1,62 +1,61 @@
+# imports
+from geo_utils import assign_crs_to_tif, merge_tifs
 import os
 import rasterio
 import subprocess
-from geo_utils import assign_crs_to_tif, merge_tifs
+import sys
 
-DATA_DIR = "/n/home10/erolf/tree_mapping/data"
+sys.path.insert(0, '') # necessary since utils is outside the process_data folder
+from utils import get_project_dir
 
 def merge_lidar_tifs(tifs_to_merge, out_tif_fp, verbose=True):
     if verbose: print(len(tifs_to_merge))
     
     # assign to a common crs
     for tif_fp in tifs_to_merge: 
-        assign_crs_to_tif(tif_fp, crs_out="EPSG:32736")
+        assign_crs_to_tif(tif_fp, crs_out='EPSG:32736')
     
-    # merge to one tif
-    merge_tifs(tifs_to_merge, out_tif_fp,  nodata_val="-9999.0")
+    # merge to one tiff
+    merge_tifs(tifs_to_merge, out_tif_fp,  nodata_val='-9999.0')
     
     return
 
 def coarsen_lidar(input_fn,
                   output_fn,
                   target_res_x=10,
-                  target_res_y=10,
-                  ):
+                  target_res_y=10):
 
-    # coarsen lidar to 10m resolution
+    # coarsen lidar to target resolution
     command = [
-        "gdalwarp",
-        "-overwrite",
-        "-ot", "Float32",
-        "-r", "average",  # this is the important bit
-        "-of", "GTiff",
-        "-tr", str(target_res_x), str(target_res_y),
-        "-srcnodata", "-9999.",
-        "-dstnodata", "-9999.",
+        'gdalwarp',
+        '-overwrite',
+        '-ot', 'Float32',
+        '-r', 'average',  # this is the important bit
+        '-of', 'GTiff',
+        '-tr', str(target_res_x), str(target_res_y),
+        '-srcnodata', '-9999.',
+        '-dstnodata', '-9999.',
         input_fn,
         output_fn
     ]
     subprocess.call(command)
 
-def coarsen_all_lidar(processed_tif_fps_1m):
-    
+def coarsen_all_lidar(processed_tif_fps_1m, target_res_x=10, target_res_y=10):
     for input_fn in processed_tif_fps_1m:
         site_id = input_fn.split('/')[-1].split('_')[0]
         if not os.path.exists(os.path.join(coarsened_chm_dir, site_id)):
             os.mkdir(os.path.join(coarsened_chm_dir, site_id))
             
-        output_fn =  os.path.join(coarsened_chm_dir, site_id, f'{site_id}_CHM_10m.tif')
+        output_fn =  os.path.join(coarsened_chm_dir, site_id, f'{site_id}_CHM_{target_res_x}m.tif')
 
         coarsen_lidar(input_fn,
                       output_fn, 
-                      target_res_x=10,
-                      target_res_y=10)
+                      target_res_x,
+                      target_res_y)
     
-    
-if __name__ == "__main__":
-   
-    data_dir = DATA_DIR 
-    
+if __name__ == '__main__':
+    data_dir = f'{get_project_dir()}/data' 
+    resolution = 30
     # where the input lidar tifs are stored
     raw_lidar_dir = os.path.join(data_dir, 'raw/raw_lidar')
     
@@ -81,14 +80,13 @@ if __name__ == "__main__":
         merge_lidar_tifs(tifs_to_merge, out_tif_fp, verbose=False)
         processed_tif_fps_1m.append(out_tif_fp)
         
-    # coarsen each to 10m res and save as a different file    
+    # coarsen each to desired resolution and save as a different file    
     # this cell needs to be moved to a script
-    coarsened_chm_dir = f'{data_dir}/int/lidar/lidar_by_site_32736_10m'
+    coarsened_chm_dir = f'{data_dir}/int/lidar/lidar_by_site_32736_{resolution}m'
 
     for dir_this in [f'{data_dir}/int/', f'{data_dir}/int/lidar/', coarsened_chm_dir]:
         if not os.path.exists(dir_this):
             os.mkdir(dir_this)
-            print('made dir ',dir_this)
+            print('made dir ', dir_this)
 
-    coarsen_all_lidar(processed_tif_fps_1m)
-    
+    coarsen_all_lidar(processed_tif_fps_1m, target_res_x=30, target_res_y=30)

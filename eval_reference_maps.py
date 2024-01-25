@@ -10,8 +10,9 @@ from eval_utils import compare_aligned_data
 from utils import get_project_dir
 
 project_dir = get_project_dir()
-lidar_10m_dir = f'{project_dir}/data/int/lidar/lidar_by_site_32736_10m'
-sites = sorted(os.listdir(lidar_10m_dir))
+resolution = 30
+lidar_coarsened_dir = f'{project_dir}/data/int/lidar/lidar_by_site_32736_{resolution}m'
+sites = sorted(os.listdir(lidar_coarsened_dir))
 reference_maps = ['ETH', 'GLAD']
 results_by_site = {reference_maps[0]: {}, reference_maps[1]: {}}
 eval_metric = 'me'
@@ -25,14 +26,14 @@ num_intervals = len(interval_bounds) - 1
 
 # get results
 for reference_map in reference_maps:
-    reference_map_by_site_dir = f'{project_dir}/data/existing_reference_data/{reference_map.lower()}_maps_per_site_10m'
+    reference_map_by_site_dir = f'{project_dir}/data/existing_reference_data/{reference_map.lower()}_maps_per_site_{resolution}m'
 
     for site in sites:
-        with rasterio.open(f'{lidar_10m_dir}/{site}/{site}_CHM_10m.tif') as file:
+        with rasterio.open(f'{lidar_coarsened_dir}/{site}/{site}_CHM_{resolution}m.tif') as file:
             site_labels = file.read().ravel()
             labels = np.append(labels, site_labels)
 
-        with rasterio.open(f'{reference_map_by_site_dir}/{reference_map}_MAP_{site}_10m.tif') as file:
+        with rasterio.open(f'{reference_map_by_site_dir}/{reference_map}_MAP_{site}_{resolution}m.tif') as file:
             site_preds = file.read().ravel()
             preds = np.append(preds, site_preds)
 
@@ -64,6 +65,7 @@ multiplier = 0
 for i in range(len(results_by_site_plot)):
     offset = width * multiplier
     rectangles = ax.bar(x+offset, results_by_site_plot[i], width, label=reference_maps[i])
+    print(results_by_site_plot[i])
     multiplier += 1
 
 ax.set_xticks(x + width/2)
@@ -72,7 +74,7 @@ ax.set_ylabel('Mean Error (m)')
 ax.set_title('ETH and GLAD Maps Evaluated by Site')
 ax.legend(ncols=2)
 # plt.savefig(f'{project_dir}/ETH-and-GLAD-maps-evaluated-by-site.png', bbox_inches='tight', pad_inches=0.1)
-plt.savefig(f'ETH-and-GLAD-maps-evaluated-by-site.png', bbox_inches='tight', pad_inches=0.1)
+plt.savefig(f'ETH-and-GLAD-maps-evaluated-by-site-{resolution}.png', bbox_inches='tight', pad_inches=0.1)
 
 # plot results by interval
 fig, ax = plt.subplots(layout='constrained', dpi=300)
@@ -80,18 +82,18 @@ x = np.arange(num_intervals)
 width = 0.3
 boxplots = []
 lines = []
-aME = [np.mean(list(itertools.chain.from_iterable(reference_map_data))) for reference_map_data in results_plot]
+aE = [np.mean(list(itertools.chain.from_iterable(reference_map_data))) for reference_map_data in results_plot]
 
 for i in range(len(results_plot)):
     pos = x + width*i + width/10*((-1)**(i+1))
     boxplots.append(ax.boxplot(results_plot[i], sym='', positions=pos, patch_artist=True, boxprops=dict(facecolor=f'C{i}'), medianprops=dict(color='black')))
-    lines.append(ax.plot(np.arange(num_intervals+1) - 7/6*width, (num_intervals+1)*[aME[i]], linestyle='dashed', label=f'{reference_maps[i]} aME'))
+    lines.append(ax.plot(np.arange(num_intervals+1) - 7/6*width, (num_intervals+1)*[aE[i]], linestyle='dashed', label=f'{reference_maps[i]} aE'))
 
 ax.set_xticks(np.arange(num_intervals+1) - 7/6*width, labels=interval_bounds)
 ax.set_xlabel('LiDAR-Derived Height (m)')
 ax.set_ylabel('Error (m)')
 ax.set_title('ETH and GLAD Maps Evaluated by Height Interval')
-ax.legend([boxplots[0]["boxes"][0], boxplots[1]["boxes"][0], lines[0][0], lines[1][0]], [reference_maps[0], reference_maps[1], f'{reference_maps[0]} aME', f'{reference_maps[1]} aME'], loc='upper right')
+ax.legend([boxplots[0]["boxes"][0], boxplots[1]["boxes"][0], lines[0][0], lines[1][0]], [reference_maps[0], reference_maps[1], f'{reference_maps[0]} aE', f'{reference_maps[1]} aE'], loc='upper right')
 # plt.savefig(f'{project_dir}/ETH-and-GLAD-maps-evaluated-by-interval.png', bbox_inches='tight', pad_inches=0.1)
 plt.savefig(f'ETH-and-GLAD-maps-evaluated-by-interval.png', bbox_inches='tight', pad_inches=0.1)
 
