@@ -6,7 +6,7 @@ import os
 import torch
 import yaml
 
-from datamodules.chm_datamodule import ChmDataModule, transforms_4_channel_rgbnir_plus_mask_imagestats
+from datamodules.chm_datamodule import ChmDataModule, transforms_4_channel_rgbnir_plus_mask_imagestats, transforms_12_channel_plus_mask_imagestats, transforms_12_channel_latllon_plus_mask_imagestats
 from experiment_utils import get_site_splits
 from trainers.regression_with_nans import PixelwiseRegressionTask
 
@@ -26,6 +26,12 @@ def setup_chm_datamodule(sites_per_split, cfg_data):
     if num_image_channels == 4:
         data_layers = ['r','g','b','nir','vis','chm']
         batch_transforms = transforms_4_channel_rgbnir_plus_mask_imagestats
+    elif num_image_channels == 12:
+        data_layers = ['B01', 'B02', 'B03', 'B04', 'B05', 'B06', 'B07', 'B08', 'B8A', 'B09', 'B11', 'B12'] + ['vis', 'chm']
+        batch_transforms = transforms_12_channel_plus_mask_imagestats
+    elif num_image_channels == 15:
+        data_layers = ['B01', 'B02', 'B03', 'B04', 'B05', 'B06', 'B07', 'B08', 'B8A', 'B09', 'B11', 'B12'] + ['vis', 'chm']
+        batch_transforms = transforms_12_channel_latllon_plus_mask_imagestats
     else:
         print('no directive for {num_image_channels} image channels')
     
@@ -113,5 +119,4 @@ if __name__ == "__main__":
     parser.add_argument("config_fp")
     args = parser.parse_args()
     config_fp = args.config_fp
-    #config_fp = 'experiment_configs/train_baseline_local_models.yaml'
     run_experiment(config_fp)
