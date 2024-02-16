@@ -16,7 +16,7 @@ def get_project_dir():
 
 def compare_tiffs():
     site = 5
-    mine = f'../../../tambe_lab/Users/luciagordon/tree_mapping/data/raw/lidar_by_site_32736/KaringaniSite0{site}_CHM_1m_merged.tif'
+    mine = f'../../../tambe_lab/Users/luciagordon/tree_mapping_feb_15/data/raw/lidar_by_site_32736/KaringaniSite0{site}_CHM_1m_merged.tif'
     # mine2 = f'../../../tambe_lab/Users/luciagordon/tree_mapping_test_2/data/raw/lidar_by_site_32736/KaringaniSite0{site}_CHM_1m_merged.tif'
     hers_today = f'../../../tambe_lab/Everyone/Karingani_data/esther_generated_feb15/raw/lidar_by_site_32736/KaringaniSite0{site}_CHM_1m_merged.tif'
     hers = f'../../../tambe_lab/Everyone/Karingani_data/esther_chm_merging_jan22_2024/raw/lidar_by_site_32736/KaringaniSite0{site}_CHM_1m_merged.tif'
@@ -129,4 +129,5 @@ def get_max_distance_to_river():
 
     print(np.max(max_distances)) # 2854 m
 
-compare_tiffs()
+if __name__ == '__main__':
+    compare_tiffs()
