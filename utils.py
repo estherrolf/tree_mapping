@@ -15,9 +15,10 @@ def get_project_dir():
     return cfg['project_dir']
 
 def compare_tiffs():
-    site = 1
+    site = 5
     mine = f'../../../tambe_lab/Users/luciagordon/tree_mapping/data/raw/lidar_by_site_32736/KaringaniSite0{site}_CHM_1m_merged.tif'
     # mine2 = f'../../../tambe_lab/Users/luciagordon/tree_mapping_test_2/data/raw/lidar_by_site_32736/KaringaniSite0{site}_CHM_1m_merged.tif'
+    hers_today = f'../../../tambe_lab/Everyone/Karingani_data/esther_generated_feb15/raw/lidar_by_site_32736/KaringaniSite0{site}_CHM_1m_merged.tif'
     hers = f'../../../tambe_lab/Everyone/Karingani_data/esther_chm_merging_jan22_2024/raw/lidar_by_site_32736/KaringaniSite0{site}_CHM_1m_merged.tif'
     hers_old = f'../../../tambe_lab/Everyone/Karingani_data/esther_chm_merging_jan11_2024/raw/lidar_by_site_32736/KaringaniSite0{site}_CHM_1m_merged.tif'
     # this = f'../../../tambe_lab/Users/luciagordon/tree-mapping-v1/data/raw/lidar_by_site_32736/KaringaniSite0{site}_CHM_1m_merged.tif'
@@ -25,7 +26,7 @@ def compare_tiffs():
     # mine = f'../../../tambe_lab/Users/luciagordon/tree_mapping_test/data/int/lidar/lidar_by_site_32736_10m/KaringaniSite0{site}/KaringaniSite0{site}_CHM_10m.tif'
     # hers = f'../../../tambe_lab/Everyone/Karingani_data/esther_lidar_outputs_dec_19/lidar_by_site_32736_10m/KaringaniSite0{site}/KaringaniSite0{site}_CHM_10m.tif'
     # this = f'../../../tambe_lab/Users/luciagordon/tree-mapping-v1/data/int/lidar/lidar_by_site_32736_10m/KaringaniSite0{site}/KaringaniSite0{site}_CHM_10m.tif'
-    print(rasterio.__version__) # 1.3.9
+    # print(rasterio.__version__) # 1.3.9
     
     def process_tiff(path):
         tiff = gdal.Open(path)
@@ -36,16 +37,19 @@ def compare_tiffs():
 
     my_arr = process_tiff(mine)
     # my_arr2 = process_tiff(mine2)
+    hers_today_arr = process_tiff(hers_today)
     her_arr = process_tiff(hers)
     her_old_arr = process_tiff(hers_old)
     # this_arr = process_tiff(this)
 
     # print((my_arr == my_arr2).all())
-    print((my_arr == her_arr).all())
-    print((her_arr == her_old_arr).all())
+    print((my_arr == hers_today_arr).all())
+    print((her_arr == hers_today_arr).all())
+    # print((my_arr == her_arr).all())
+    # print((her_arr == her_old_arr).all())
 
-    print((this_arr == her_arr).all())
-    print((this_arr == my_arr).all())
+    # print((this_arr == her_arr).all())
+    # print((this_arr == my_arr).all())
 
 def check_percentage_data_in_range():
     '''check what % of the 10m data is outside the 0-30 m height range'''
@@ -68,7 +72,7 @@ def check_percentage_data_in_range():
 
     print(f'Percentage of points in range = {100*num_points_in_range/total_points}')
 
-def plot_distance_to_feature()
+def plot_distance_to_feature():
     lidar_10m_dir = f'{get_project_dir()}/data/int/lidar/lidar_by_site_32736_10m'
     sites = os.listdir(lidar_10m_dir)
     site = sites[1]
@@ -124,3 +128,5 @@ def get_max_distance_to_river():
         max_distances += [np.max(np.load(f'{distances_to_river_dir}/{array}'))]
 
     print(np.max(max_distances)) # 2854 m
+
+compare_tiffs()
