@@ -14,6 +14,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import os
 import segmentation_models_pytorch as smp
+import sys
 import timm
 import torch
 import torch.nn as nn
@@ -29,6 +30,11 @@ from torchvision.models._api import WeightsEnum
 from torchgeo.datasets import unbind_samples
 from torchgeo.models import FCN, get_weight
 from torchgeo.trainers import utils, BaseTask
+
+# so that we can use the pretrained models from this repo
+sys.path.append('../global-canopy-height-model')
+from gchm.models.xception_sentinel2 import xceptionS2_08blocks_256
+
 
 class BaseTask(LightningModule, ABC):
     """Abstract base class for all TorchGeo trainers.
@@ -79,6 +85,8 @@ class BaseTask(LightningModule, ABC):
         """
         return self.model(*args, **kwargs)
     
+
+
 class RegressionTask(BaseTask):
     """Regression."""
 
@@ -432,6 +440,12 @@ class PixelwiseRegressionTask(RegressionTask):
                 classes=1,
                 num_filters=self.hparams["num_filters"],
             )
+        elif self.hparams["model"] == 'xceptionS2_08blocks_256':
+            self.model = xceptionS2_08blocks_256(in_channels=self.hparams["in_channels"], 
+                                                 out_channels=1, 
+                                                 model_weights=weights,
+                                                 returns="targets")
+            
         else:
             raise ValueError(
                 f"Model type '{self.hparams['model']}' is not valid. "
@@ -455,6 +469,23 @@ class PixelwiseRegressionTask(RegressionTask):
         ]:
             for param in self.model.encoder.parameters():
                 param.requires_grad = False
+                
+        elif self.hparams["model"] in ['xceptionS2_08blocks_256']:
+            # default to everything frozen
+            for param in self.model.parameters():
+                param.requires_grad = False
+
+            if self.hparams.get("freeze_backbone", True):
+                # just the linear layer
+                parts_to_unfreeze = [self.model.predictions]
+            else:
+                # linear and second to last layer
+                parts_to_unfreeze = [self.model.predictions, self.model.sepconv_blocks[-1]]
+            #unfreeze the last parameters
+            for model_part in parts_to_unfreeze:
+                for param in model_part.parameters():
+                    param.requires_grad = True
+                
 
         # Freeze decoder
         if self.hparams.get("freeze_decoder", False) and self.hparams["model"] in [
