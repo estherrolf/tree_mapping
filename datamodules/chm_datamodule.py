@@ -24,20 +24,21 @@ project_dir = get_project_dir()
 data_stats_dir = f'{project_dir}/data/int/data_stats'
 
 S2_stats_by_channel = json.load(open(f'{data_stats_dir}/S2_stats_by_channel.json'))
+print(S2_stats_by_channel)
 
 sentinel_layer_codes = {'b': 'B02',
                         'g': 'B03',
                         'r': 'B04',
-                        'nir':'B08',
-                        'vis':'TCI'}
+                        'nir': 'B08',
+                        'vis': 'TCI'}
 
-rgbnir_codes = ['B04', 'B03','B02','B08']
+rgbnir_codes = ['B04', 'B03','B02', 'B08']
 sentinel_layer_means_4_channel = [S2_stats_by_channel[channel]['mean'] for channel in rgbnir_codes]
 sentinel_layer_stds_4_channel = [S2_stats_by_channel[channel]['std'] for channel in rgbnir_codes]
 
 s2_12_channel_codes = ['B01', 'B02', 'B03', 'B04', 'B05', 'B06', 'B07', 'B08', 'B8A', 'B09', 'B11', 'B12']
 # as per Lang et al.
-s2_12_channel_plus_latlon_codes = s2_12_channel_codes + ['lat','sin(lon)', 'cos(lon)']
+s2_12_channel_plus_latlon_codes = s2_12_channel_codes + ['lat', 'sin(lon)', 'cos(lon)']
 
 sentinel_layer_means_12_channel_plus_latlon = [S2_stats_by_channel[channel]['mean'] for channel in s2_12_channel_plus_latlon_codes]
 sentinel_layer_stds_12_channel_plus_latlon = [S2_stats_by_channel[channel]['std'] for channel in s2_12_channel_plus_latlon_codes]
@@ -253,19 +254,10 @@ def transforms_4_channel_rgbnir_no_mask_imagestats(sample, img_nodata_val=-9999.
 def make_site_dataset(site_id,  
                       transforms, 
                       layers=[],
-<<<<<<< Updated upstream
-                      data_dir=DATA_DIR,
-                      chm_relative_dir="int/lidar/lidar_by_site_32736_10m",
-                      sentinel_relative_dir="int/sentinel/sentinel_by_site_32736_10m",
-                      canopy_relative_dir = 'int/alos/alos_by_site_20_FNF',
-                      
-                     ):
-=======
                       data_dir=f'{project_dir}/data',
                       chm_relative_dir='int/lidar/lidar_by_site_32736_10m',
                       sentinel_relative_dir='int/sentinel/sentinel_by_site_32736_10m',
-                      canopy_relative_dir = 'int/alos/alos_by_site_20_FNF'):
->>>>>>> Stashed changes
+                      canopy_relative_dir='int/alos/alos_by_site_20_FNF'):
     '''
     Returns a dataset with layers in this order: 
         sentinel, then CHM (if requested), then context data (e.g. canopy -- if requested).
