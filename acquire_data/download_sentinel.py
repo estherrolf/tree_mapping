@@ -80,6 +80,33 @@ class DownloadSentinel:
                         data = file.read()
                         this_dict = {'vals': data.ravel()}
                         data_stats_by_tile[channel].append(this_dict)
+        
+        # store latlon of each tile as well -- only need center because we will average them
+        latlon_keys = ['lat', 'lon','sin(lon)', 'cos(lon)']
+        latlon_by_tile = {}
+        for latlon_keys in latlon_channels:
+            latlon_by_tile[latlon_keys] = []
+
+        for sentinel_dir in sentinel_dirs:
+            for fn in os.listdir(sentinel_dir):
+                if not fn.endswith('.tif'): continue
+                channel = fn.split('_')[2].split('.')[0]
+                if channel.startswith('B01'):
+                    with rasterio.open(os.path.join(sentinel_dir, fn)) as f:
+
+                        data = f.read()
+                        src_crs = f.crs
+                        bds =f.bounds
+
+                        dst_crs = rasterio.crs.CRS.from_epsg('4326')
+                        bds_degrees = rasterio.warp.transform_bounds(src_crs, dst_crs, *bds)
+
+                        lon_center = (bds_degrees[0] + bds_degrees[2]) / 2.
+                        lat_center = (bds_degrees[1] + bds_degrees[3]) / 2.
+                        latlon_by_tile['lat'].append(lat_center)
+                        latlon_by_tile['lon'].append(lon_center)
+                        latlon_by_tile['sin(lon)'].append(np.sin(lon_center/360*(2*np.pi)))
+                        latlon_by_tile['cos(lon)'].append(np.cos(lon_center/360*(2*np.pi)))
 
         # aggregate by channel
         data_stats_by_channel = {}
@@ -92,6 +119,12 @@ class DownloadSentinel:
                     all_pix.append(x['vals'])
 
                 data_stats_by_channel[channel] = {'mean': np.mean(all_pix), 'std': np.std(all_pix)}
+                
+        for latlon_key in latlon_channels:  
+            all_vals = latlon_by_tile[latlon_key]
+            image_stats_by_channel[latlon_key] = {'mean': np.mean(all_vals),
+                                                   'std': np.std(all_vals)
+                                                   }
 
         # save
         os.makedirs(f'{self.project_dir}/data/int/data_stats/', exist_ok=True)

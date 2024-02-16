@@ -433,7 +433,7 @@ class PixelwiseRegressionTask(RegressionTask):
                 "Currently, only supports 'unet', 'deeplabv3+' and 'fcn'."
             )
 
-        if self.hparams["model"] != "fcn":
+        if self.hparams["model"] not in ["fcn", "xceptionS2_08blocks_256"]:
             if weights and weights is not True:
                 if isinstance(weights, WeightsEnum):
                     state_dict = weights.get_state_dict(progress=True)
