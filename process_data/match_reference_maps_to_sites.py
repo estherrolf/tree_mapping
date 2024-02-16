@@ -9,8 +9,9 @@ sys.path.insert(0, '') # necessary since utils is outside the process_data folde
 from utils import get_project_dir
 
 class CropReferenceMaps:
-    def __init__(self):
+    def __init__(self, resolution=10):
         self.project_dir = get_project_dir()
+        self.resolution = resolution
 
         self.make_per_site_files(map='eth', map_tiff=self.merge_ETH_maps())
         self.make_per_site_files(map='glad', map_tiff=self.crop_GLAD_map())
@@ -48,15 +49,15 @@ class CropReferenceMaps:
         return cropped_glad_tiff
 
     def make_per_site_files(self, map, map_tiff):
-        '''Make per-site files for the ETH and GLAD maps to match the 10m resolution data'''
+        '''Make per-site files for the ETH and GLAD maps to match the coarsened resolution data'''
         ref_data_dir = f'{self.project_dir}/data/existing_reference_data'
-        global_map_by_site_dir = f'{ref_data_dir}/{map}_maps_per_site_10m'
+        global_map_by_site_dir = f'{ref_data_dir}/{map}_maps_per_site_{self.resolution}m'
         os.makedirs(global_map_by_site_dir, exist_ok=True)
-        lidar_10m_dir = f'{self.project_dir}/data/int/lidar/lidar_by_site_32736_10m'
+        lidar_coarsened_dir = f'{self.project_dir}/data/int/lidar/lidar_by_site_32736_{self.resolution}m'
 
-        for site in os.listdir(lidar_10m_dir):
-            global_map_site_tiff = f'{global_map_by_site_dir}/{map.upper()}_MAP_{site}_10m.tif'
-            lidar_site_tiff = f'{lidar_10m_dir}/{site}/{site}_CHM_10m.tif'
+        for site in os.listdir(lidar_coarsened_dir):
+            global_map_site_tiff = f'{global_map_by_site_dir}/{map.upper()}_MAP_{site}_{self.resolution}m.tif'
+            lidar_site_tiff = f'{lidar_coarsened_dir}/{site}/{site}_CHM_{self.resolution}m.tif'
 
             geo_utils.match_input_to_target_tif(input_fn=map_tiff,
                                                 output_fn=global_map_site_tiff,
@@ -76,4 +77,4 @@ class CropReferenceMaps:
         plt.savefig(f'{self.project_dir}/{map}-histogram.png')
 
 if __name__ == '__main__':
-    CropReferenceMaps()
+    CropReferenceMaps(resolution=30)

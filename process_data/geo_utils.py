@@ -1,3 +1,8 @@
+import os
+
+os.environ['GDAL_VERSION'] = '3.8.3'
+os.environ['PROJ_LIB'] = '~/../../tambe_lab/Users/luciagordon/tree_mapping_env/share/proj'
+
 import rasterio
 import subprocess
 
@@ -9,6 +14,11 @@ def assign_crs_to_tif(tif_fp, crs_out):
     
     
 def merge_tifs(in_tif_fps, out_tif_fp,  nodata_val="-9999.0", output_type=None):
+    print("Rasterio version:", rasterio.__version__)
+    print("GDAL version:", os.getenv('GDAL_VERSION'))
+    print("GDAL_DATA:", os.getenv('GDAL_DATA'))
+    print("PROJ_LIB:", os.getenv('PROJ_LIB'))
+
     # if output_type not specified, match the dtype of the first tif
     if output_type is None:
         with rasterio.open(in_tif_fps[0], "r") as f:
