@@ -15,9 +15,9 @@ def get_project_dir():
     return cfg['project_dir']
 
 def compare_tiffs():
-    site = 5
-    mine = f'../../../tambe_lab/Users/luciagordon/tree_mapping_feb_15/data/raw/lidar_by_site_32736/KaringaniSite0{site}_CHM_1m_merged.tif'
-    # mine2 = f'../../../tambe_lab/Users/luciagordon/tree_mapping_test_2/data/raw/lidar_by_site_32736/KaringaniSite0{site}_CHM_1m_merged.tif'
+    site = 3
+    mine = f'../../../tambe_lab/Users/luciagordon/tree_mapping_feb_16/data/raw/lidar_by_site_32736/KaringaniSite0{site}_CHM_1m_merged.tif'
+    mine2 = f'../../../tambe_lab/Users/luciagordon/tree_mapping_feb_15/data/raw/lidar_by_site_32736/KaringaniSite0{site}_CHM_1m_merged.tif'
     hers_today = f'../../../tambe_lab/Everyone/Karingani_data/esther_generated_feb15/raw/lidar_by_site_32736/KaringaniSite0{site}_CHM_1m_merged.tif'
     hers = f'../../../tambe_lab/Everyone/Karingani_data/esther_chm_merging_jan22_2024/raw/lidar_by_site_32736/KaringaniSite0{site}_CHM_1m_merged.tif'
     hers_old = f'../../../tambe_lab/Everyone/Karingani_data/esther_chm_merging_jan11_2024/raw/lidar_by_site_32736/KaringaniSite0{site}_CHM_1m_merged.tif'
@@ -28,6 +28,9 @@ def compare_tiffs():
     # this = f'../../../tambe_lab/Users/luciagordon/tree-mapping-v1/data/int/lidar/lidar_by_site_32736_10m/KaringaniSite0{site}/KaringaniSite0{site}_CHM_10m.tif'
     # print(rasterio.__version__) # 1.3.9
     
+    my_SAFR = '~/../../tambe_lab/Users/luciagordon/tree_mapping'
+    her_SAFR = '~/../../tambe_lab/Everyone/Forest_height_2019_SAFR.tif'
+
     def process_tiff(path):
         tiff = gdal.Open(path)
         num_rows = tiff.RasterYSize
@@ -36,15 +39,15 @@ def compare_tiffs():
         return array
 
     my_arr = process_tiff(mine)
-    # my_arr2 = process_tiff(mine2)
+    my_arr2 = process_tiff(mine2)
     hers_today_arr = process_tiff(hers_today)
     her_arr = process_tiff(hers)
     her_old_arr = process_tiff(hers_old)
     # this_arr = process_tiff(this)
 
-    # print((my_arr == my_arr2).all())
+    print((my_arr == my_arr2).all())
     print((my_arr == hers_today_arr).all())
-    print((her_arr == hers_today_arr).all())
+    # print((her_arr == hers_today_arr).all())
     # print((my_arr == her_arr).all())
     # print((her_arr == her_old_arr).all())
 
