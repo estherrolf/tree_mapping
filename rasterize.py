@@ -55,5 +55,5 @@ def rasterize(vector_path, raster_name, resolution=10): # resolution = number of
     plt.savefig(f'{raster_name}.png', bbox_inches='tight', pad_inches=0)
     plt.close() # close the image to save memory
 
-rasterize(vector_path='../KaGR_Riv_Updated_20230326_UTM36s/KaGR_Riv_Updated_20230326_UTM36s.shp',
+rasterize(vector_path='../river-shapefile/river-shapefile.shp',
           raster_name='river_raster')
