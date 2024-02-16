@@ -36,19 +36,19 @@ sentinel_tiles_per_site = {'KaringaniMassingirDevNode':1,
                            'KaringaniSouthNorthDevNode':0,
                            'Mbilu':0}  
 
-lidar_10m_dir = f'{project_dir}/data/int/lidar/lidar_by_site_32736_10m' # where to read data from
-sentinel_by_site_dir = f'{project_dir}/data/int/sentinel/sentinel_by_site_32736_10m'
 
-def crop_sentinel_to_karingani_data(buffer=40):
+def crop_sentinel_to_karingani_data(resolution=10, buffer=40):
+    lidar_dir = f'{project_dir}/data/int/lidar/lidar_by_site_32736_{resolution}m' # where to read data from
+    sentinel_by_site_dir = f'{project_dir}/data/int/sentinel/sentinel_by_site_32736_{resolution}m'
     # match sentinel to chm files
-    sites = os.listdir(lidar_10m_dir)
+    sites = os.listdir(lidar_dir)
 
     for site in sites:
         print(site)
         os.makedirs(f'{sentinel_by_site_dir}/{site}', exist_ok=True)
 
         sentinel_tile_dir = sentinel_dirs[sentinel_tiles_per_site[site]]
-        lidar_10m_site_tiff = f'{lidar_10m_dir}/{site}/{site}_CHM_10m.tif'
+        lidar_site_tiff = f'{lidar_dir}/{site}/{site}_CHM_{resolution}m.tif'
 
         for band_tiff in os.listdir(sentinel_tile_dir):
             band_tiff_path = f'{sentinel_tile_dir}/{band_tiff}'
@@ -56,7 +56,7 @@ def crop_sentinel_to_karingani_data(buffer=40):
 
             match_input_to_target_tif(input_fn=band_tiff_path, 
                                       output_fn=cropped_band_tiff_path, 
-                                      target_fn=lidar_10m_site_tiff, 
+                                      target_fn=lidar_site_tiff, 
                                       resampling='near',
                                       pixel_buffer=buffer,
                                       output_type='int16',
@@ -94,8 +94,9 @@ def crop_sentinel_to_karingani_data(buffer=40):
 #                                       output_type='int16',
 #                                       verbose=verbose)
 
-if __name__  == '__main__':           
-    crop_sentinel_to_karingani_data()
+if __name__  == '__main__':
+    resolution = 30    
+    crop_sentinel_to_karingani_data(resolution)
 
     # chunked_alos_dir = os.path.join(DATA_DIR, 'int/alos/alos_by_site_20_FNF')
     # if not os.path.exists(os.path.join(DATA_DIR, 'int/alos')): os.mkdir(os.path.join(DATA_DIR, 'int/alos'))

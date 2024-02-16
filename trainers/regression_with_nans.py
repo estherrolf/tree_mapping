@@ -7,31 +7,30 @@ Trainers for regression. Modified from https://github.com/microsoft/torchgeo/blo
 # Copyright (c) Microsoft Corporation. All rights reserved.
 # Licensed under the MIT License.
 
-from abc import ABC, abstractmethod
-from collections.abc import Sequence
-from typing import Any, Optional, Union
-
+# imports
+import csv
 import lightning
-from lightning.pytorch import LightningModule
-from torch.optim import AdamW
-from torch.optim.lr_scheduler import ReduceLROnPlateau
-
-import os
-
 import matplotlib.pyplot as plt
+import numpy as np
+import os
 import segmentation_models_pytorch as smp
+import sys
 import timm
 import torch
 import torch.nn as nn
+from abc import ABC, abstractmethod
+from collections.abc import Sequence
+from lightning.pytorch import LightningModule
+from typing import Any, Optional, Union
+from torch.optim import AdamW
+from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torch import Tensor
 from torchmetrics import MeanAbsoluteError, MeanSquaredError, MetricCollection
 from torchvision.models._api import WeightsEnum
-
 from torchgeo.datasets import unbind_samples
 from torchgeo.models import FCN, get_weight
 from torchgeo.trainers import utils, BaseTask
 
-import sys
 # so that we can use the pretrained models from this repo
 sys.path.append('../global-canopy-height-model')
 from gchm.models.xception_sentinel2 import xceptionS2_08blocks_256
@@ -150,6 +149,8 @@ class RegressionTask(BaseTask):
         # new things:
         self.nan_val_mask = nan_val_mask
         self.pad_pixels = pad_pixels
+        self.val_metrics_by_epoch = []
+        self.val_metrics_by_batch = []
         
         super().__init__(ignore="weights")
 
@@ -302,11 +303,14 @@ class RegressionTask(BaseTask):
             y_hat = y_hat_
             y = y_
 
-        
         loss = self.criterion(y_hat, y)
         self.log("val_loss", loss)
         self.val_metrics(y_hat, y)
         self.log_dict(self.val_metrics)
+        val_metrics_dict = {key: value.cpu().item() for key, value in dict(self.val_metrics.compute().items()).items()} # dictionary with val_MAE, val_MSE, val_RMSE
+        val_metrics_dict['val_loss'] = loss.cpu().item() # add val_loss to dictionary
+        batch_val_metrics = list(val_metrics_dict.values()) # extract just the values
+        self.val_metrics_by_batch += [batch_val_metrics] # save batch within the epoch
 
         if (
             batch_idx < 10
@@ -336,6 +340,20 @@ class RegressionTask(BaseTask):
                         plt.close()
             except ValueError:
                 pass
+
+    def on_validation_epoch_end(self):
+        means_across_batches = np.mean(np.array(self.val_metrics_by_batch), axis=0).tolist() # get the average of each metric across batches
+        self.val_metrics_by_batch = [] # reset for the next epoch
+        # print(f'means across batches = {means_across_batches}')
+        self.val_metrics_by_epoch += [means_across_batches] # save epoch results
+        # print(f'val metrics by epoch = {self.val_metrics_by_epoch}')
+
+        with open(f'{self.logger.log_dir}/val_metrics.csv', 'w', newline='') as csvfile: # save all epoch results as CSV
+            writer = csv.writer(csvfile, delimiter=' ', quotechar='|', quoting=csv.QUOTE_MINIMAL)
+            writer.writerow(['val_MAE', 'val_MSE', 'val_RMSE', 'val_loss'])
+            
+            for row in range(len(self.val_metrics_by_epoch)):
+                writer.writerow(self.val_metrics_by_epoch[row])
 
     def test_step(self, batch: Any, batch_idx: int, dataloader_idx: int = 0) -> None:
         """Compute the test loss and additional metrics.
@@ -400,6 +418,7 @@ class PixelwiseRegressionTask(RegressionTask):
     def configure_models(self) -> None:
         """Initialize the model."""
         weights = self.weights
+        print('hyperparameters:', self.hparams)
 
         if self.hparams["model"] == "unet":
             self.model = smp.Unet(
