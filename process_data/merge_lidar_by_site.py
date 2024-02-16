@@ -1,7 +1,8 @@
 # imports
 from geo_utils import assign_crs_to_tif, merge_tifs
+# from osgeo import gdal
 import os
-import rasterio
+# import rasterio
 import subprocess
 import sys
 
@@ -17,7 +18,7 @@ def merge_lidar_tifs(tifs_to_merge, out_tif_fp, verbose=True):
     
     # merge to one tiff
     merge_tifs(tifs_to_merge, out_tif_fp,  nodata_val='-9999.0')
-    
+    # gdal.Warp(out_tif_fp, tifs_to_merge, format = 'GTiff')
     return
 
 def coarsen_lidar(input_fn,
