@@ -31,7 +31,7 @@ def coarsen_lidar(input_fn,
         'gdalwarp',
         '-overwrite',
         '-ot', 'Float32',
-        '-r', 'average',  # this is the important bit
+        '-r', 'average',  # average when multiple pixels present
         '-of', 'GTiff',
         '-tr', str(target_res_x), str(target_res_y),
         '-srcnodata', '-9999.',
@@ -75,6 +75,7 @@ if __name__ == '__main__':
         # prepare file names
         site_id = site_name.split('_')[1]
         site_dir = f'{raw_lidar_dir}/{site_name}/CHM'
+        print(site_dir)
         tifs_to_merge = [f'{site_dir}/{x}'  for x in os.listdir(site_dir) if x.endswith('.tif')]
         out_tif_fp = os.path.join(crs_lidar_dir, f'{site_id}_CHM_1m_merged.tif' )
         # merge files and save 
