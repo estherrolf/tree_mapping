@@ -481,10 +481,13 @@ class PixelwiseRegressionTask(RegressionTask):
                 # linear and second to last layer
                 parts_to_unfreeze = [self.model.predictions, self.model.sepconv_blocks[-1]]
             elif self.hparams["num_layers_to_unfreeze"] == 3:
-                # linear and second to last layer
+                # linear and last two layers
                 parts_to_unfreeze = [self.model.predictions, self.model.sepconv_blocks[-1],self.model.sepconv_blocks[-2]]
+            elif self.hparams["num_layers_to_unfreeze"] == 9:
+                # 9 all layers
+                parts_to_unfreeze = [self.model]
             else:
-                print(f'asked to unfreeze {self.hparams["task"]["num_layers_to_unfreeze"]} layers, can only handle 1, 2, or 3')
+                print(f'asked to unfreeze {self.hparams["num_layers_to_unfreeze"]} layers, can only handle 1, 2, 3, or 9')
             #unfreeze the last parameters
             for model_part in parts_to_unfreeze:
                 for param in model_part.parameters():
