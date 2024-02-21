@@ -44,7 +44,7 @@ sentinel_layer_means_12_channel_plus_latlon = [S2_stats_by_channel[channel]['mea
 sentinel_layer_stds_12_channel_plus_latlon = [S2_stats_by_channel[channel]['std'] for channel in s2_12_channel_plus_latlon_codes]
 
 def degree_to_radian(x):
-        return x / 360. * (2 * np.pi)
+        return (2 * np.pi) * x / 360.  
     
 def bounds_to_latlon_encoding(bds, h,w, src_crs):
     # convert bounds and pixel size to a lat-lon encoding per pixel, according to the encoding
@@ -54,6 +54,7 @@ def bounds_to_latlon_encoding(bds, h,w, src_crs):
     bds_degrees = rasterio.warp.transform_bounds(src_crs, dst_crs, *bds)
 
     # get latitude and longitude per pixel (in degrees)
+    # top to bottom for latitude
     lat_per_pixel_vals = np.linspace(bds_degrees[3], bds_degrees[1], num=h)
     lat_per_pixel = np.vstack([lat_per_pixel_vals for x in range(w)]).T
     lon_per_pixel_vals = np.linspace(bds_degrees[0], bds_degrees[2], num=w)
