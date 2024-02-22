@@ -1,4 +1,5 @@
 # imports
+from osgeo import gdal
 import geo_utils
 import os
 import matplotlib.pyplot as plt
@@ -9,7 +10,7 @@ sys.path.insert(0, '') # necessary since utils is outside the process_data folde
 from utils import get_project_dir
 
 class CropReferenceMaps:
-    def __init__(self, resolution=10):
+    def __init__(self, resolution):
         self.project_dir = get_project_dir()
         self.resolution = resolution
 
@@ -23,8 +24,7 @@ class CropReferenceMaps:
         global_map_dir = f'{self.project_dir}/data/int/global_tch_maps'
         os.makedirs(global_map_dir, exist_ok=True)
         merged_eth_tiff = f'{global_map_dir}/ETH_GlobalCanopyHeight_10m_merged.tif'
-
-        geo_utils.merge_tifs(in_tif_fps=eth_tiles, out_tif_fp=merged_eth_tiff, output_type='Byte') # same as input
+        gdal.Warp(destNameOrDestDS=merged_eth_tiff, srcDSOrSrcDSTab=eth_tiles, srcNodata=255, dstNodata=255, format='GTiff', outputType=gdal.gdalconst.GDT_Byte)
 
         return merged_eth_tiff
 
@@ -33,10 +33,10 @@ class CropReferenceMaps:
         lidar_dir = f'{self.project_dir}/data/raw/lidar_by_site_32736'
         input_lidar_sites = [f'{lidar_dir}/{x}' for x in os.listdir(lidar_dir) if x.endswith('.tif')]
         lidar_sites_merged = f'{self.project_dir}/lidar_sites_merged.tif'
-        geo_utils.merge_tifs(in_tif_fps=input_lidar_sites, out_tif_fp=lidar_sites_merged, output_type='Float32')
+        gdal.Warp(destNameOrDestDS=lidar_sites_merged, srcDSOrSrcDSTab=input_lidar_sites, format='GTiff', srcNodata=255.0, dstNodata=255.0, outputType=gdal.gdalconst.GDT_Float32)
 
         glad_tiff = f'{self.project_dir}/data/raw/global_tch_maps/Forest_height_2019_SAFR.tif'
-        cropped_glad_tiff = f'{self.project_dir}/data/raw/global_tch_maps/Forest_height_2019_SAFR_cropped.tif'
+        cropped_glad_tiff = f'{self.project_dir}/data/raw/global_tch_maps/Forest_height_2019_SAFR_cropped_no_data_103.tif'
 
         geo_utils.crop_input_to_target_tif(input_fn=glad_tiff,
                                            output_fn=cropped_glad_tiff,
@@ -46,10 +46,18 @@ class CropReferenceMaps:
                                            output_nodata='255')
         os.remove(lidar_sites_merged)
 
+        with rasterio.open(cropped_glad_tiff) as file:
+            metadata = file.meta
+            tiff_array = file.read()
+            tiff_array[tiff_array > 100] = 255
+
+            with rasterio.open(f'{self.project_dir}/data/raw/global_tch_maps/Forest_height_2019_SAFR_cropped.tif', 'w', **metadata) as out_file:
+                out_file.write(tiff_array)
+
         return cropped_glad_tiff
 
     def make_per_site_files(self, map, map_tiff):
-        '''Make per-site files for the ETH and GLAD maps to match the coarsened resolution data'''
+        '''Make per-site files for the ETH and GLAD maps to match the coarsened LiDAR data'''
         ref_data_dir = f'{self.project_dir}/data/existing_reference_data'
         global_map_by_site_dir = f'{ref_data_dir}/{map}_maps_per_site_{self.resolution}m'
         os.makedirs(global_map_by_site_dir, exist_ok=True)
@@ -65,16 +73,17 @@ class CropReferenceMaps:
                                                 pixel_buffer=0,
                                                 verbose=False,
                                                 output_type='Float32',
-                                                resampling="average",
+                                                resampling='average',
                                                 src_nodata='255',
-                                                output_nodata='-9999.')
+                                                output_nodata='255.0')
 
-        with rasterio.open(global_map_site_tiff) as file:
-            data = file.read()
+        # with rasterio.open(global_map_site_tiff) as file:
+        #     data = file.read()
 
-        plt.figure(dpi=300)
-        plt.hist(data[data != -9999.].ravel())
-        plt.savefig(f'{self.project_dir}/{map}-histogram.png')
+        # plt.figure(dpi=300)
+        # plt.hist(data[data != -9999.].ravel())
+        # plt.savefig(f'{self.project_dir}/{map}-histogram.png')
 
 if __name__ == '__main__':
+    CropReferenceMaps(resolution=10)
     CropReferenceMaps(resolution=30)
