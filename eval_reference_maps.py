@@ -12,7 +12,7 @@ from utils import get_project_dir
 project_dir = get_project_dir()
 reference_maps = ['ETH', 'GLAD']
 
-def eval_reference_maps(resolution=30, eval_metric='me'):
+def eval_reference_maps(resolution, eval_metric='me'):
     lidar_coarsened_dir = f'{project_dir}/data/int/lidar/lidar_by_site_32736_{resolution}m'
     sites = sorted(os.listdir(lidar_coarsened_dir))
     results_by_site = {reference_maps[0]: {}, reference_maps[1]: {}}
@@ -21,7 +21,7 @@ def eval_reference_maps(resolution=30, eval_metric='me'):
     preds = []
     results = {reference_maps[0]: {}, reference_maps[1]: {}}
     results_plot = []
-    interval_bounds = [0, 10, 20, 30]
+    interval_bounds = [0, 5, 15, 30]
     num_intervals = len(interval_bounds) - 1
 
     # get results
@@ -29,11 +29,11 @@ def eval_reference_maps(resolution=30, eval_metric='me'):
         reference_map_by_site_dir = f'{project_dir}/data/existing_reference_data/{reference_map.lower()}_maps_per_site_{resolution}m'
 
         for site in sites:
-            with rasterio.open(f'{lidar_coarsened_dir}/{site}/{site}_CHM_{resolution}m.tif') as file:
+            with rasterio.open(f'{lidar_coarsened_dir}/{site}/{site}_CHM_{resolution}m.tif') as file: # opens label tiff
                 site_labels = file.read().ravel()
                 labels = np.append(labels, site_labels)
 
-            with rasterio.open(f'{reference_map_by_site_dir}/{reference_map}_MAP_{site}_{resolution}m.tif') as file:
+            with rasterio.open(f'{reference_map_by_site_dir}/{reference_map}_MAP_{site}_{resolution}m.tif') as file: # opens prediction tiff
                 site_preds = file.read().ravel()
                 preds = np.append(preds, site_preds)
 
@@ -49,10 +49,11 @@ def eval_reference_maps(resolution=30, eval_metric='me'):
 
         results_plot += [[results[reference_map][f'interval_{i}'] for i in range(num_intervals)]]
 
+    print(f'Resolution = {resolution}')
     for i in range(len(results_plot)):
-        print(len(results_plot[i]))
+        print(reference_maps[i])
         for j in range(len(results_plot[i])):
-            print(len(results_plot[i][j]))
+            print(f'Number of pixels in interval {j} = {len(results_plot[i][j])}')
 
     # print(f'results plot shape = {np.array(results_plot).shape}')
 
@@ -74,7 +75,8 @@ def eval_reference_maps(resolution=30, eval_metric='me'):
     ax.set_title('ETH and GLAD Maps Evaluated by Site')
     ax.legend(ncols=2)
     # plt.savefig(f'{project_dir}/ETH-and-GLAD-maps-evaluated-by-site.png', bbox_inches='tight', pad_inches=0.1)
-    plt.savefig(f'ETH-and-GLAD-maps-evaluated-by-site-{resolution}.png', bbox_inches='tight', pad_inches=0.1)
+    plt.savefig(f'ETH-and-GLAD-maps-evaluated-by-site-{resolution}m.png', bbox_inches='tight', pad_inches=0.1)
+    print('Plotted results by site')
 
     # plot results by interval
     fig, ax = plt.subplots(layout='constrained', dpi=300)
@@ -95,10 +97,12 @@ def eval_reference_maps(resolution=30, eval_metric='me'):
     ax.set_title('ETH and GLAD Maps Evaluated by Height Interval')
     ax.legend([boxplots[0]["boxes"][0], boxplots[1]["boxes"][0], lines[0][0], lines[1][0]], [reference_maps[0], reference_maps[1], f'{reference_maps[0]} aE', f'{reference_maps[1]} aE'], loc='upper right')
     # plt.savefig(f'{project_dir}/ETH-and-GLAD-maps-evaluated-by-interval.png', bbox_inches='tight', pad_inches=0.1)
-    plt.savefig(f'ETH-and-GLAD-maps-evaluated-by-interval.png', bbox_inches='tight', pad_inches=0.1)
+    plt.savefig(f'ETH-and-GLAD-maps-evaluated-by-interval-{resolution}m.png', bbox_inches='tight', pad_inches=0.1)
+    print('Plotted results by height interval')
 
-eval_reference_maps(resolution=10)
-eval_reference_maps(resolution=30)
+if __name__ == '__main__':
+    eval_reference_maps(resolution=10)
+    eval_reference_maps(resolution=30)
 
 # # scatter plot one for sanity check
 # site = sites[4]
