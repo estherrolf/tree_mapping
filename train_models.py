@@ -5,6 +5,10 @@ import sys
 import torch
 import yaml
 
+from lightning.pytorch.callbacks import EarlyStopping, ModelCheckpoint
+from lightning.pytorch.loggers import TensorBoardLogger
+from lightning.pytorch import Trainer
+
 from datamodules.chm_datamodule import ChmDataModule, transforms_4_channel_rgbnir_plus_mask_imagestats, transforms_12_channel_plus_mask_imagestats, transforms_12_channel_latllon_plus_mask_imagestats
 from experiment_utils import get_site_splits
 from trainers.regression_with_nans import PixelwiseRegressionTask
@@ -36,6 +40,11 @@ def setup_chm_datamodule(sites_per_split, cfg_data):
                         **cfg_data['datamodule'])
     
     return chm
+
+def read_config_file(config_yaml):
+    with open(config_yaml, "r") as cfg_file:
+        cfg = yaml.safe_load(cfg_file)
+    return cfg
 
 def train(datamodule, task, base_name, exp_name, version_id=None, **trainer_kwargs):
     # set up log dirs
@@ -75,8 +84,10 @@ def run_experiment(config_fp, lr=None, weight_decay=None):
     for split_number in splits_to_do:
         task = cfg['task']
         
+        # override training hyperparameters in config file if specified directly
         if lr is not None:
             task['lr'] = lr
+        if weight_decay is not None:
             task['weight_decay'] = weight_decay
         
         # get the assignment for this split number
@@ -95,4 +106,4 @@ if __name__ == '__main__':
     else:
         run_experiment(config_fp=sys.argv[1], lr=float(sys.argv[2]), weight_decay=float(sys.argv[3]))
 
-# terminal command for tensorboard: tensorboard --logdir experiment_results/local_only_models --port 6006
+
