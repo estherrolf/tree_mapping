@@ -81,10 +81,6 @@ def compare_aligned_data(labels,
     preds[preds == nodata_value] = 0 # sets NaNs in predictions to 0
     masked_preds = np.clip(preds[mask], a_min=preds_clip[0], a_max=preds_clip[1]) # ensures the predictions are in the range 0-30m
 
-    # # impute any nodatas in the predictions
-    # if isinstance(code_preds_nodata_as, (int, float)):
-    #     masked_preds[masked_preds == nodata_value] = code_preds_nodata_as # this is redundant because of the clipping above
-    
     r2 = sklearn.metrics.r2_score(masked_labels, masked_preds) # r^2 score
     mae = sklearn.metrics.mean_absolute_error(masked_labels, masked_preds) # mean absolute error
     mse = sklearn.metrics.mean_squared_error(masked_labels, masked_preds) # mean squared error
