@@ -77,27 +77,15 @@ def transforms_12_channel_latllon_plus_mask_imagestats(sample, img_nodata_val=-9
     label_band = num_image_bands + num_vis_bands
     sample['mask'] = torch.Tensor(sample['image'][label_band:label_band+1]).clone()
     
-    # clip extreme values 
-    sample['mask'][sample['mask'] > 30] = 30.
-    # less than 0 is a NaN
-    sample['mask'][sample['mask'] < 0] = -9999.
-    
     # make sure no imagery has nodata vals if mask has vals
     img_nodata_mask = (sample['image'][:num_image_bands] == img_nodata_val).any(axis=0)
-    mask_nodata_mask = (sample['mask'] == mask_nodata_val)[0]#.any(axis=0)
+    mask_nodata_mask = (sample['mask'] == mask_nodata_val)[0]
     if img_nodata_mask[~mask_nodata_mask].any(): print('NODATA VAL detected in imagery')
     
         
     # these three bands are the visual image, separate them
     if len(sample['image']) > num_image_bands+1:
         sample['vis'] = sample['image'][num_image_bands:num_image_bands+num_vis_bands].clone()    
-    
-    # if there is extra context data to be had
-    if len(sample['image']) > num_image_bands+num_vis_bands + 1:
-        sample['context'] = sample['image'][8:].clone().long() 
-        # assumes contexts is a 4 channel canopy map 
-        sample['context'] = torch.nn.functional.one_hot(sample['context']-1, num_classes=4).float()
-        sample['context'] = sample['context'].transpose(0,3).squeeze()
         
     # bands 0-11 are the image
     sample['image'] = sample['image'][:num_image_bands].clone() 
@@ -135,28 +123,15 @@ def transforms_12_channel_plus_mask_imagestats(sample, img_nodata_val=-9999., ma
     label_band = num_image_bands + num_vis_bands
     sample['mask'] = torch.Tensor(sample['image'][label_band:label_band+1]).clone()
     
-    # clip extreme values 
-    sample['mask'][sample['mask'] > 30] = 30.
-    # less than 0 is a NaN
-    sample['mask'][sample['mask'] < 0] = -9999.
-    
     # make sure no imagery has nodata vals if mask has vals
     img_nodata_mask = (sample['image'][:num_image_bands] == img_nodata_val).any(axis=0)
-    mask_nodata_mask = (sample['mask'] == mask_nodata_val)[0]#.any(axis=0)
+    mask_nodata_mask = (sample['mask'] == mask_nodata_val)[0]
     if img_nodata_mask[~mask_nodata_mask].any(): print('NODATA VAL detected in imagery')
     
-        
     # these three bands are the visual image, separate them
     if len(sample['image']) > num_image_bands+1:
         sample['vis'] = sample['image'][num_image_bands:num_image_bands+num_vis_bands].clone()    
-    
-    # if there is extra context data to be had
-    if len(sample['image']) > num_image_bands+num_vis_bands + 1:
-        sample['context'] = sample['image'][8:].clone().long() 
-        # assumes contexts is a 4 channel canopy map 
-        sample['context'] = torch.nn.functional.one_hot(sample['context']-1, num_classes=4).float()
-        sample['context'] = sample['context'].transpose(0,3).squeeze()
-        
+
     # bands 0-11 are the image
     sample['image'] = sample['image'][:num_image_bands].clone() 
     
@@ -181,11 +156,6 @@ def transforms_4_channel_rgbnir_plus_mask_imagestats(sample, img_nodata_val=-999
     label_band = 7
     sample['mask'] = torch.Tensor(sample['image'][label_band:label_band+1]).clone()
     
-    # clip extreme values 
-    sample['mask'][sample['mask'] > 30] = 30.
-    # less than 0 is a NaN
-    sample['mask'][sample['mask'] < 0] = -9999.
-    
     # make sure no imagery has nodata vals if mask has vals
     img_nodata_mask = (sample['image'][:4] == img_nodata_val).any(axis=0)
     mask_nodata_mask = (sample['mask'] == mask_nodata_val)[0]#.any(axis=0)
@@ -194,13 +164,6 @@ def transforms_4_channel_rgbnir_plus_mask_imagestats(sample, img_nodata_val=-999
     # these three bands are the visual image, separate them
     if len(sample['image']) > 5:
         sample['vis'] = sample['image'][4:7].clone()    
-    
-    # if there is extra context data to be had
-    if len(sample['image']) > 8:
-        sample['context'] = sample['image'][8:].clone().long() 
-        # assumes contexts is a 4 channel canopy map 
-        sample['context'] = torch.nn.functional.one_hot(sample['context']-1, num_classes=4).float()
-        sample['context'] = sample['context'].transpose(0,3).squeeze()
         
     # bands 0-4 are the image
     sample['image'] = sample['image'][:4].clone() 
@@ -227,13 +190,6 @@ def transforms_4_channel_rgbnir_no_mask_imagestats(sample, img_nodata_val=-9999.
     # last three bands are the visual image, separate them
     if len(sample['image']) > 5:
         sample['vis'] = sample['image'][4:7].clone()    
-    
-    # if there is extra context data to be had
-    if len(sample['image']) > 8:
-        sample['context'] = sample['image'][8:].clone().long() 
-        # assumes contexts is a 4 channel canopy map 
-        sample['context'] = torch.nn.functional.one_hot(sample['context']-1, num_classes=4).float()
-        sample['context'] = sample['context'].transpose(0,3).squeeze()
         
     # bands 0-4 are the image
     sample['image'] = sample['image'][:4].clone() 
