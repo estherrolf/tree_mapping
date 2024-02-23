@@ -71,15 +71,15 @@ def match_map_to_labels(eval_site_id,
 def compare_aligned_data(labels, 
                          preds, 
                          interval=[0, 30],
-                         nodata_value=255, 
+                         nodata_value=-9999.0, 
                          return_vals=False,
                          code_preds_nodata_as=0,
                          preds_clip=[0, 30]):
 
-    mask = (labels != nodata_value) & (labels >= interval[0]) & (labels <= interval[1]) # exclude pixels for which we have no labels or whose values are out of range in the current analysis
+    mask = (labels != nodata_value) & (labels >= interval[0]) & (labels <= interval[1]) # excludes pixels for which we have no labels or whose values are out of range in the current analysis
     masked_labels = labels[mask]
-    preds[preds == nodata_value] = 0 # set NaNs in predictions to 0
-    masked_preds = np.clip(preds[mask], a_min=preds_clip[0], a_max=preds_clip[1]) # ensure the predictions are in the range 0-30m
+    preds[preds == nodata_value] = 0 # sets NaNs in predictions to 0
+    masked_preds = np.clip(preds[mask], a_min=preds_clip[0], a_max=preds_clip[1]) # ensures the predictions are in the range 0-30m
 
     # # impute any nodatas in the predictions
     # if isinstance(code_preds_nodata_as, (int, float)):
@@ -94,7 +94,7 @@ def compare_aligned_data(labels,
     if return_vals:
         return {'r2': r2, 'mae': mae, 'mse': mse, 'rmse': np.sqrt(mse), 'me': me, 'errors': errors, 'mask': mask, 'labels': labels, 'preds': preds}
     else:
-        return {'r2': r2, 'mae': mae, 'mse': mse, 'rmse': np.sqrt(mse), 'me': me}
+        return {'r2': r2, 'mae': mae, 'mse': mse, 'rmse': np.sqrt(mse), 'me': me, 'errors': errors}
 
 
 def plot_aligned_data(labels, preds, vis=None, title='title me!'):
