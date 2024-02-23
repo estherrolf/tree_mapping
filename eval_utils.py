@@ -4,7 +4,7 @@ import os
 import rasterio
 import sklearn.metrics
 import utils
-from torchgeo.trainers.utils import extract_backbone
+# from torchgeo.trainers.utils import extract_backbone
 
 def get_lowest_val_checkpoint(checkpoint_dir):
     # find the checkpoint in checkpoint_dir with the lowest val loss
@@ -71,29 +71,30 @@ def match_map_to_labels(eval_site_id,
 def compare_aligned_data(labels, 
                          preds, 
                          interval=[0, 30],
-                         nodata_value=-9999, 
+                         nodata_value=-9999.0, 
                          return_vals=False,
                          code_preds_nodata_as=0,
                          preds_clip=[0, 30]):
-        
-    mask = (labels != nodata_value) & (labels >= interval[0]) & (labels <= interval[1]) # select only valid values
-    masked_labels = labels[mask]
-    masked_preds = np.clip(preds[mask], a_min=preds_clip[0], a_max=preds_clip[1])
 
-    # impute any nodatas in the predictions
-    if isinstance(code_preds_nodata_as, (int, float)):
-        masked_preds[masked_preds == nodata_value] = code_preds_nodata_as
+    mask = (labels != nodata_value) & (labels >= interval[0]) & (labels <= interval[1]) # excludes pixels for which we have no labels or whose values are out of range in the current analysis
+    masked_labels = labels[mask]
+    preds[preds == nodata_value] = 0 # sets NaNs in predictions to 0
+    masked_preds = np.clip(preds[mask], a_min=preds_clip[0], a_max=preds_clip[1]) # ensures the predictions are in the range 0-30m
+
+    # # impute any nodatas in the predictions
+    # if isinstance(code_preds_nodata_as, (int, float)):
+    #     masked_preds[masked_preds == nodata_value] = code_preds_nodata_as # this is redundant because of the clipping above
     
-    r2 = sklearn.metrics.r2_score(masked_labels, masked_preds)
-    mae = sklearn.metrics.mean_absolute_error(masked_labels, masked_preds)
-    mse = sklearn.metrics.mean_squared_error(masked_labels, masked_preds)
-    me = np.mean(masked_preds - masked_labels)
-    errors = masked_preds - masked_labels
+    r2 = sklearn.metrics.r2_score(masked_labels, masked_preds) # r^2 score
+    mae = sklearn.metrics.mean_absolute_error(masked_labels, masked_preds) # mean absolute error
+    mse = sklearn.metrics.mean_squared_error(masked_labels, masked_preds) # mean squared error
+    me = np.mean(masked_preds - masked_labels) # mean error
+    errors = masked_preds - masked_labels # residuals
 
     if return_vals:
         return {'r2': r2, 'mae': mae, 'mse': mse, 'rmse': np.sqrt(mse), 'me': me, 'errors': errors, 'mask': mask, 'labels': labels, 'preds': preds}
     else:
-        return {'r2': r2, 'mae': mae, 'mse': mse, 'rmse': np.sqrt(mse), 'me': me}
+        return {'r2': r2, 'mae': mae, 'mse': mse, 'rmse': np.sqrt(mse), 'me': me, 'errors': errors}
 
 
 def plot_aligned_data(labels, preds, vis=None, title='title me!'):

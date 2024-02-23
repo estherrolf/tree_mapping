@@ -14,39 +14,93 @@ def get_project_dir():
 
     return cfg['project_dir']
 
+def tiff_to_array(path):
+    tiff = gdal.Open(path)
+    num_rows = tiff.RasterYSize
+    num_cols = tiff.RasterXSize
+    array = ((tiff.GetRasterBand(1)).ReadAsArray(0, 0, num_cols, num_rows).astype(np.float32))
+    return array
+
 def compare_tiffs():
-    site = 3
-    mine = f'../../../tambe_lab/Users/luciagordon/tree_mapping_feb_16/data/raw/lidar_by_site_32736/KaringaniSite0{site}_CHM_1m_merged.tif'
-    mine2 = f'../../../tambe_lab/Users/luciagordon/tree_mapping_feb_15/data/raw/lidar_by_site_32736/KaringaniSite0{site}_CHM_1m_merged.tif'
-    hers_today = f'../../../tambe_lab/Everyone/Karingani_data/esther_generated_feb15/raw/lidar_by_site_32736/KaringaniSite0{site}_CHM_1m_merged.tif'
-    hers = f'../../../tambe_lab/Everyone/Karingani_data/esther_chm_merging_jan22_2024/raw/lidar_by_site_32736/KaringaniSite0{site}_CHM_1m_merged.tif'
-    hers_old = f'../../../tambe_lab/Everyone/Karingani_data/esther_chm_merging_jan11_2024/raw/lidar_by_site_32736/KaringaniSite0{site}_CHM_1m_merged.tif'
-    # this = f'../../../tambe_lab/Users/luciagordon/tree-mapping-v1/data/raw/lidar_by_site_32736/KaringaniSite0{site}_CHM_1m_merged.tif'
+    sites = os.listdir('../../../tambe_lab/Users/luciagordon/tree_mapping_email/data/int/lidar/lidar_by_site_32736_10m')
 
-    # mine = f'../../../tambe_lab/Users/luciagordon/tree_mapping_test/data/int/lidar/lidar_by_site_32736_10m/KaringaniSite0{site}/KaringaniSite0{site}_CHM_10m.tif'
-    # hers = f'../../../tambe_lab/Everyone/Karingani_data/esther_lidar_outputs_dec_19/lidar_by_site_32736_10m/KaringaniSite0{site}/KaringaniSite0{site}_CHM_10m.tif'
-    # this = f'../../../tambe_lab/Users/luciagordon/tree-mapping-v1/data/int/lidar/lidar_by_site_32736_10m/KaringaniSite0{site}/KaringaniSite0{site}_CHM_10m.tif'
-    # print(rasterio.__version__) # 1.3.9
-    
-    my_SAFR = '~/../../tambe_lab/Users/luciagordon/tree_mapping'
-    her_SAFR = '~/../../tambe_lab/Everyone/Forest_height_2019_SAFR.tif'
+    for site in sites:
+        my_10m_feb19 = f'../../../tambe_lab/Users/luciagordon/tree_mapping_feb19/data/int/lidar/lidar_by_site_32736_10m/{site}/{site}_CHM_10m.tif'
+        my_30m_feb19 = f'../../../tambe_lab/Users/luciagordon/tree_mapping_feb19/data/int/lidar/lidar_by_site_32736_30m/{site}/{site}_CHM_30m.tif'
 
-    def process_tiff(path):
-        tiff = gdal.Open(path)
-        num_rows = tiff.RasterYSize
-        num_cols = tiff.RasterXSize
-        array = ((tiff.GetRasterBand(1)).ReadAsArray(0, 0, num_cols, num_rows).astype(np.float32))
-        return array
+        my_10m = f'../../../tambe_lab/Users/luciagordon/tree_mapping_warp/data/int/lidar/lidar_by_site_32736_10m/{site}/{site}_CHM_10m.tif'
+        my_30m = f'../../../tambe_lab/Users/luciagordon/tree_mapping_warp/data/int/lidar/lidar_by_site_32736_30m/{site}/{site}_CHM_30m.tif'
 
-    my_arr = process_tiff(mine)
-    my_arr2 = process_tiff(mine2)
-    hers_today_arr = process_tiff(hers_today)
-    her_arr = process_tiff(hers)
-    her_old_arr = process_tiff(hers_old)
-    # this_arr = process_tiff(this)
+        # her_10m = f'../../../tambe_lab/Everyone/Karingani_data/esther_10m_30m_using_lucias1m/int/lidar/lidar_by_site_32736_10m/{site}/{site}_CHM_10m.tif'
+        # her_30m = f'../../../tambe_lab/Everyone/Karingani_data/esther_10m_30m_using_lucias1m/int/lidar/lidar_by_site_32736_30m/{site}/{site}_CHM_30m.tif'
 
-    print((my_arr == my_arr2).all())
-    print((my_arr == hers_today_arr).all())
+        # mine = f'../../../tambe_lab/Users/luciagordon/tree_mapping_feb_16/data/raw/lidar_by_site_32736/{site}_CHM_1m_merged.tif'
+        # mine2 = f'../../../tambe_lab/Users/luciagordon/tree_mapping_feb_15/data/raw/lidar_by_site_32736/{site}_CHM_1m_merged.tif'
+
+        mine_feb19 = f'../../../tambe_lab/Users/luciagordon/tree_mapping_feb19/data/raw/lidar_by_site_32736/{site}_CHM_1m_merged.tif'
+        mine_mergetifs = f'../../../tambe_lab/Users/luciagordon/tree_mapping_merge_tifs/data/raw/lidar_by_site_32736/{site}_CHM_1m_merged.tif'
+        mine_warp = f'../../../tambe_lab/Users/luciagordon/tree_mapping_warp/data/raw/lidar_by_site_32736/{site}_CHM_1m_merged.tif'
+        hers_feb15 = f'../../../tambe_lab/Everyone/Karingani_data/esther_generated_feb15/raw/lidar_by_site_32736/{site}_CHM_1m_merged.tif'
+        hers_mergetifs = f'../../../tambe_lab/Everyone/Karingani_data/esther_feb16_mergetifs_envvars/raw/lidar_by_site_32736/{site}_CHM_1m_merged.tif'
+        hers_warp = f'../../../tambe_lab/Everyone/Karingani_data/esther_feb16_warp/raw/lidar_by_site_32736/{site}_CHM_1m_merged.tif'
+
+        # hers = f'../../../tambe_lab/Everyone/Karingani_data/esther_chm_merging_jan22_2024/raw/lidar_by_site_32736/KaringaniSite0{site}_CHM_1m_merged.tif'
+        # hers_old = f'../../../tambe_lab/Everyone/Karingani_data/esther_chm_merging_jan11_2024/raw/lidar_by_site_32736/KaringaniSite0{site}_CHM_1m_merged.tif'
+        # this = f'../../../tambe_lab/Users/luciagordon/tree-mapping-v1/data/raw/lidar_by_site_32736/KaringaniSite0{site}_CHM_1m_merged.tif'
+
+        # mine = f'../../../tambe_lab/Users/luciagordon/tree_mapping_test/data/int/lidar/lidar_by_site_32736_10m/KaringaniSite0{site}/KaringaniSite0{site}_CHM_10m.tif'
+        # hers = f'../../../tambe_lab/Everyone/Karingani_data/esther_lidar_outputs_dec_19/lidar_by_site_32736_10m/KaringaniSite0{site}/KaringaniSite0{site}_CHM_10m.tif'
+        # this = f'../../../tambe_lab/Users/luciagordon/tree-mapping-v1/data/int/lidar/lidar_by_site_32736_10m/KaringaniSite0{site}/KaringaniSite0{site}_CHM_10m.tif'
+        # print(rasterio.__version__) # 1.3.9
+
+        my_10m_feb19_arr = tiff_to_array(my_10m_feb19)
+        my_30m_feb19_arr = tiff_to_array(my_30m_feb19)
+
+        mine_feb19_arr = tiff_to_array(mine_feb19)
+        mine_mergetifs_arr = tiff_to_array(mine_mergetifs)
+        mine_warp_arr = tiff_to_array(mine_warp)
+        hers_feb15_arr = tiff_to_array(hers_feb15)
+        hers_mergetifs_arr = tiff_to_array(hers_mergetifs)
+        hers_warp_arr = tiff_to_array(hers_warp)
+
+        my_10m_arr = tiff_to_array(my_10m)
+        my_30m_arr = tiff_to_array(my_30m)
+
+        # her_10m_arr = tiff_to_array(her_10m)
+        # her_30m_arr = tiff_to_array(her_30m)
+
+
+        # print((my_arr == my_arr2).all())
+        print(site)
+        print('mine 10m', (my_10m_feb19_arr == my_10m_arr).all())
+        print('mine 30m', (my_30m_feb19_arr == my_30m_arr).all())
+        print('my feb19 my warp', (mine_feb19_arr == mine_warp_arr).all())
+        # print('my mergetifs my warp', (mine_mergetifs_arr == mine_warp_arr).all())
+        # print('mine merge tiffs hers merge tiffs', (mine_mergetifs_arr == hers_mergetifs_arr).all())
+        # print('mine hers warp', (mine_warp_arr == hers_warp_arr).all())
+        # print('hers feb 15 hers merge tiffs', (hers_feb15_arr == hers_mergetifs_arr).all())
+        # print('hers feb 15 hers warp', (hers_feb15_arr == hers_warp_arr).all())
+        # print('hers mergetifs hers warp', (hers_mergetifs_arr == hers_warp_arr).all())
+        # print('10m', (my_10m_arr == her_10m_arr).all())
+        # print('30m', (my_30m_arr == her_30m_arr).all())
+
+    my_eth = '../../../tambe_lab/Users/luciagordon/tree_mapping/data/int/global_tch_maps/ETH_GlobalCanopyHeight_10m_merged.tif'
+    her_eth = '../../../tambe_lab/Everyone/Karingani_data/ETH_GlobalCanopyHeight_10m_merged.tif'
+    my_SAFR = '../../../tambe_lab/Users/luciagordon/tree_mapping/data/raw/global_tch_maps/Forest_height_2019_SAFR_cropped.tif'
+    her_SAFR = '../../../tambe_lab/Everyone/Karingani_data/Forest_height_2019_SAFR_cropped_2.tif'
+
+    # her_arr = tiff_to_array(hers)
+    # her_old_arr = tiff_to_array(hers_old)
+    # this_arr = tiff_to_array(this)
+
+    # my_eth_arr = tiff_to_array(my_eth)
+    # her_eth_arr = tiff_to_array(her_eth)
+    # my_safr_arr = tiff_to_array(my_SAFR)
+    # her_safr_arr = tiff_to_array(her_SAFR)
+
+    # print((my_eth_arr == her_eth_arr).all())
+    # print((my_safr_arr == her_safr_arr).all())
+
     # print((her_arr == hers_today_arr).all())
     # print((my_arr == her_arr).all())
     # print((her_arr == her_old_arr).all())
