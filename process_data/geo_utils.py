@@ -1,4 +1,3 @@
-import os
 import rasterio
 import subprocess
 
@@ -8,7 +7,7 @@ def assign_crs_to_tif(tif_fp, crs_out):
                tif_fp]
     subprocess.call(command)
     
-    
+
 def merge_tifs(in_tif_fps, out_tif_fp,  nodata_val="-9999.0", output_type=None):
     # if output_type not specified, match the dtype of the first tif
     if output_type is None:
@@ -28,8 +27,8 @@ def merge_tifs(in_tif_fps, out_tif_fp,  nodata_val="-9999.0", output_type=None):
 def match_input_to_target_tif(input_fn, 
                               output_fn, 
                               target_fn, 
-                              pixel_buffer = 0, 
-                              verbose=False, 
+                              pixel_buffer=0, 
+                              verbose=False,
                               output_type=None,
                               resampling="average",
                               src_nodata="-9999.",
@@ -77,11 +76,14 @@ def match_input_to_target_tif(input_fn,
         output_fn
     ]
     
-    if verbose: print(command)
+    if verbose:
+        print(command)
+
     subprocess.call(command)
-    
-    if verbose: print(f'saved in {output_fn}')
-    return
+
+    if verbose:
+        print(f'saved in {output_fn}')
+
 
 def crop_input_to_target_tif(input_fn, 
                              output_fn, 
@@ -97,19 +99,20 @@ def crop_input_to_target_tif(input_fn,
     
     Will not reproject. Note: pixel buffer is in terms of the input fn resolution.
     """
-    
+
     # if output_type not specified, match the dtype of the input tif
-    with rasterio.open(input_fn, "r") as f:        
+    with rasterio.open(input_fn) as f:      
+        res_x, res_y = f.res
+
         if output_type is None:
             output_type = f.dtypes[0]
-        res_x, res_y = f.res
+
         if output_nodata is None:
             output_nodata = f.nodata
-            if output_nodata is None:
-                print('no nodata specified in file and none specied to replace it')
-            
+            print('no nodata specified in file and none specified to replace it')
+
     # Uses bounds and crs of target file, will not reproject!
-    with rasterio.open(target_fn, "r") as f:
+    with rasterio.open(target_fn) as f:
         left, bottom, right, top = f.bounds
         crs = f.crs.to_string()
 
@@ -117,7 +120,7 @@ def crop_input_to_target_tif(input_fn,
     bottom = bottom - (pixel_buffer  * res_x)
     right = right + (pixel_buffer * res_y)
     top = top + (pixel_buffer  * res_y)
-    
+
     command = [
         "gdalwarp",
         "-overwrite",
@@ -132,12 +135,16 @@ def crop_input_to_target_tif(input_fn,
         input_fn,
         output_fn
     ]
+
     if match_res:
         command.insert(10, "-tr")
         command.insert(11, str(res_x))
         command.insert(12, str(res_y))
-    if verbose: print(command)
+
+    if verbose:
+        print(command)
+
     subprocess.call(command)
-    
-    if verbose: print(f'saved in {output_fn}')
-    return
+
+    if verbose:
+        print(f'saved in {output_fn}')
