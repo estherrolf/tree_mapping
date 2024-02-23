@@ -106,6 +106,7 @@ class RegressionTask(BaseTask):
         patience: int = 10,
         freeze_backbone: bool = False,
         freeze_decoder: bool = False,
+        num_layers_to_unfreeze: int=0,
         nan_val_mask: Optional[int] = None, 
         pad_pixels: Optional[int] = 0
     ) -> None:
@@ -133,6 +134,7 @@ class RegressionTask(BaseTask):
             freeze_decoder: Freeze the decoder network to linear probe
                 the regression head. Does not support FCN models.
                 Only applicable to PixelwiseRegressionTask.
+            num_layers_to_unfreeze: Number of layers to unfreeze, used only for xception model.
 
         .. versionchanged:: 0.4
            Change regression model support from torchvision.models to timm
@@ -330,7 +332,6 @@ class RegressionTask(BaseTask):
                     batch[key] = batch[key].cpu()
                 for i in range(4):
                     sample = unbind_samples(batch)[i]
- #                   print(f"{batch_idx}-{i}-c-{sample['context'][:,32,32]}")
                     if (sample[self.target_key] >= 0).any():
                         fig = datamodule.plot(sample, pad=self.pad_pixels)
                         summary_writer = self.logger.experiment
@@ -344,9 +345,7 @@ class RegressionTask(BaseTask):
     def on_validation_epoch_end(self):
         means_across_batches = np.mean(np.array(self.val_metrics_by_batch), axis=0).tolist() # get the average of each metric across batches
         self.val_metrics_by_batch = [] # reset for the next epoch
-        # print(f'means across batches = {means_across_batches}')
         self.val_metrics_by_epoch += [means_across_batches] # save epoch results
-        # print(f'val metrics by epoch = {self.val_metrics_by_epoch}')
 
         with open(f'{self.logger.log_dir}/val_metrics.csv', 'w', newline='') as csvfile: # save all epoch results as CSV
             writer = csv.writer(csvfile, delimiter=' ', quotechar='|', quoting=csv.QUOTE_MINIMAL)
@@ -418,7 +417,7 @@ class PixelwiseRegressionTask(RegressionTask):
     def configure_models(self) -> None:
         """Initialize the model."""
         weights = self.weights
-        print('hyperparameters:', self.hparams)
+        # print('hyperparameters:', self.hparams)
 
         if self.hparams["model"] == "unet":
             self.model = smp.Unet(
@@ -475,12 +474,20 @@ class PixelwiseRegressionTask(RegressionTask):
             for param in self.model.parameters():
                 param.requires_grad = False
 
-            if self.hparams.get("freeze_backbone", True):
+            if self.hparams["num_layers_to_unfreeze"] == 1:
                 # just the linear layer
                 parts_to_unfreeze = [self.model.predictions]
-            else:
+            elif self.hparams["num_layers_to_unfreeze"] == 2:
                 # linear and second to last layer
                 parts_to_unfreeze = [self.model.predictions, self.model.sepconv_blocks[-1]]
+            elif self.hparams["num_layers_to_unfreeze"] == 3:
+                # linear and last two layers
+                parts_to_unfreeze = [self.model.predictions, self.model.sepconv_blocks[-1],self.model.sepconv_blocks[-2]]
+            elif self.hparams["num_layers_to_unfreeze"] == 9:
+                # 9 all layers
+                parts_to_unfreeze = [self.model]
+            else:
+                print(f'asked to unfreeze {self.hparams["num_layers_to_unfreeze"]} layers, can only handle 1, 2, 3, or 9')
             #unfreeze the last parameters
             for model_part in parts_to_unfreeze:
                 for param in model_part.parameters():

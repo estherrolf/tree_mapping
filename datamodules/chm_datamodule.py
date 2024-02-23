@@ -24,7 +24,6 @@ project_dir = get_project_dir()
 data_stats_dir = f'{project_dir}/data/int/data_stats'
 
 S2_stats_by_channel = json.load(open(f'{data_stats_dir}/S2_stats_by_channel.json'))
-print(S2_stats_by_channel)
 
 sentinel_layer_codes = {'b': 'B02',
                         'g': 'B03',
