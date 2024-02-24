@@ -27,6 +27,7 @@ class DownloadSentinel:
                                     'S2B_MSIL2A_20210513T073609_R092_T36JUT_20210514T161910'] # 05/13/21
 
         for tile in sentinel_tiles_karingani:
+            print(f'Tile {tile}')
             os.makedirs(f'{self.sentinel_2021_dir}/{tile}', exist_ok=True)
             self.download_sentinel_tile(tile=tile)
 
@@ -82,8 +83,9 @@ class DownloadSentinel:
                         data_stats_by_tile[channel].append(this_dict)
         
         # store latlon of each tile as well -- only need center because we will average them
-        latlon_keys = ['lat', 'lon','sin(lon)', 'cos(lon)']
+        latlon_keys = ['lat', 'lon', 'sin(lon)', 'cos(lon)']
         latlon_by_tile = {}
+
         for latlon_keys in latlon_channels:
             latlon_by_tile[latlon_keys] = []
 
@@ -91,12 +93,13 @@ class DownloadSentinel:
             for fn in os.listdir(sentinel_dir):
                 if not fn.endswith('.tif'): continue
                 channel = fn.split('_')[2].split('.')[0]
+
                 if channel.startswith('B01'):
                     with rasterio.open(os.path.join(sentinel_dir, fn)) as f:
 
                         data = f.read()
                         src_crs = f.crs
-                        bds =f.bounds
+                        bds = f.bounds
 
                         dst_crs = rasterio.crs.CRS.from_epsg('4326')
                         bds_degrees = rasterio.warp.transform_bounds(src_crs, dst_crs, *bds)
@@ -122,9 +125,7 @@ class DownloadSentinel:
                 
         for latlon_key in latlon_channels:  
             all_vals = latlon_by_tile[latlon_key]
-            image_stats_by_channel[latlon_key] = {'mean': np.mean(all_vals),
-                                                   'std': np.std(all_vals)
-                                                   }
+            image_stats_by_channel[latlon_key] = {'mean': np.mean(all_vals), 'std': np.std(all_vals)}
 
         # save
         os.makedirs(f'{self.project_dir}/data/int/data_stats/', exist_ok=True)
