@@ -1,0 +1,34 @@
+# lightning.pytorch==2.0.0
+seed_training: 100
+splits_to_do:
+  - 0
+base_name: 'experiment_results'
+exp_name: 'finetune_xceptionS2'
+version_id_base: 'xceptionS2_08blocks_256_no_latlon_randominit_train_last_two'
+data:
+  split_seed: 10
+  num_image_channels: 12
+  datamodule:
+    batch_size: 64
+    patch_size: 96
+    length: 10000
+    num_workers: 12
+    eval_pad: 5
+task:
+  loss: 'mse'
+  model: 'xceptionS2_08blocks_256'
+  freeze_backbone: False
+  num_layers_to_unfreeze: 9
+  weights: #None
+  in_channels: 12
+  lr: 0.001
+  weight_decay: 0.01
+  nan_val_mask: -9999.
+  pad_pixels: 5
+    
+trainer:
+  min_epochs: 1
+  max_epochs: 100
+  accelerator: 'gpu'
+  devices:
+    - 2

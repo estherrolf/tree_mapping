@@ -86,8 +86,8 @@ class DownloadSentinel:
         latlon_keys = ['lat', 'lon', 'sin(lon)', 'cos(lon)']
         latlon_by_tile = {}
 
-        for latlon_keys in latlon_channels:
-            latlon_by_tile[latlon_keys] = []
+        for latlon_key in latlon_keys:
+            latlon_by_tile[latlon_key] = []
 
         for sentinel_dir in sentinel_dirs:
             for fn in os.listdir(sentinel_dir):
@@ -123,7 +123,7 @@ class DownloadSentinel:
 
                 data_stats_by_channel[channel] = {'mean': np.mean(all_pix), 'std': np.std(all_pix)}
                 
-        for latlon_key in latlon_channels:  
+        for latlon_key in latlon_keys:  
             all_vals = latlon_by_tile[latlon_key]
             image_stats_by_channel[latlon_key] = {'mean': np.mean(all_vals), 'std': np.std(all_vals)}
 
