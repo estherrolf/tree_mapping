@@ -12,7 +12,7 @@ from utils import get_project_dir
 project_dir = get_project_dir()
 reference_maps = ['ETH', 'GLAD']
 
-def eval_reference_maps(resolution, eval_metric='me'):
+def eval_reference_maps(resolution, eval_metric='rmse'):
     lidar_coarsened_dir = f'{project_dir}/data/int/lidar/lidar_by_site_32736_{resolution}m'
     sites = sorted(os.listdir(lidar_coarsened_dir))
     results_by_site = {reference_maps[0]: {}, reference_maps[1]: {}}
@@ -66,11 +66,11 @@ def eval_reference_maps(resolution, eval_metric='me'):
         print(results_by_site_plot[i])
         multiplier += 1
     
-    ax.plot(np.arange(len(sites)+1 - 7/6*width), (len(sites)+1)*[aE[0]], linestyle='dashed', label=f'{reference_maps[i]} aE')
-    ax.plot(np.arange(len(sites)+1 - 7/6*width), (len(sites)+1)*[aE[1]], linestyle='dashed', label=f'{reference_maps[i]} aE')
+    # ax.plot(np.arange(len(sites)+1 - 7/6*width), (len(sites)+1)*[aE[0]], linestyle='dashed', label=f'{reference_maps[i]} aE')
+    # ax.plot(np.arange(len(sites)+1 - 7/6*width), (len(sites)+1)*[aE[1]], linestyle='dashed', label=f'{reference_maps[i]} aE')
     ax.set_xticks(x + width/2)
     ax.set_xticklabels(sites, rotation=90)
-    ax.set_ylabel('Mean Error (m)')
+    ax.set_ylabel('RMSE (m)')
     ax.set_title('ETH and GLAD Maps Evaluated by Site')
     ax.legend(ncols=2)
     plt.savefig(f'ETH-and-GLAD-maps-evaluated-by-site-{resolution}m.png', bbox_inches='tight', pad_inches=0.1)
