@@ -40,6 +40,6 @@ To evaluate local models and visualize predictions, run through the steps in `ev
 
 ## comparing globally pretrained models
 ### 
-To compare to globally trained models to predict tree canopy height [Lang et al. 2023](https://www.nature.com/articles/s41559-023-02206-6), first clone their repo (v1.0) from the [global-canopy-height](https://github.com/langnico/global-canopy-height-model](https://github.com/langnico/global-canopy-height-model/releases/tag/v1.0-trained-model-weights) github page, at the same directory level as this repository. 
+To compare to globally trained models to predict tree canopy height [Lang et al. 2023](https://www.nature.com/articles/s41559-023-02206-6), first clone their repo (v1.0) from the [global-canopy-height](https://github.com/langnico/global-canopy-height-model/releases/tag/v1.0-trained-model-weights) github page, at the same directory level as this repository. 
 
 The configuration files for training with pretrained and randomly initialized models from that paper are in the `experiment_configs` folder. 
