@@ -72,14 +72,11 @@ def compare_aligned_data(labels,
                          preds, 
                          interval=[0, 30],
                          nodata_value=-9999.0, 
-                         return_vals=False,
-                         code_preds_nodata_as=0,
-                         preds_clip=[0, 30]):
+                         return_vals=False):
 
-    mask = (labels != nodata_value) & (labels >= interval[0]) & (labels <= interval[1]) # excludes pixels for which we have no labels or whose values are out of range in the current analysis
+    mask = (labels != nodata_value) & (preds != nodata_value) & (labels >= interval[0]) & (labels <= interval[1]) # excludes pixels for which we have no labels or predictions or whose labels are out of range in the current analysis
     masked_labels = labels[mask]
-    preds[preds == nodata_value] = 0 # sets NaNs in predictions to 0
-    masked_preds = np.clip(preds[mask], a_min=preds_clip[0], a_max=preds_clip[1]) # ensures the predictions are in the range 0-30m
+    masked_preds = preds[mask]
 
     r2 = sklearn.metrics.r2_score(masked_labels, masked_preds) # r^2 score
     mae = sklearn.metrics.mean_absolute_error(masked_labels, masked_preds) # mean absolute error
