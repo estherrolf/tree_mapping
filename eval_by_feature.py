@@ -15,7 +15,7 @@ def eval_reference_maps_feature(feature, resolution):
     sites = sorted(os.listdir(lidar_coarsened_dir))
     results_feature = {reference_maps[0]: {}, reference_maps[1]: {}}
     results_plot = []
-    interval_bounds = [0, 500, 1000, 1500, 2000, 2500, 3000] # 2854 m is the max
+    interval_bounds = [0, 100, 300, 600, 1000, 2000, 3000] # 2854 m is the max
     num_intervals = len(interval_bounds) - 1
 
     for reference_map in reference_maps:
@@ -53,20 +53,20 @@ def eval_reference_maps_feature(feature, resolution):
 
     for i in range(len(results_plot)):
         pos = x + width*i + width/10*((-1)**(i+1))
-        boxplots.append(ax.boxplot(results_plot[i], sym='', positions=pos, patch_artist=True, boxprops=dict(facecolor=f'C{i}'), medianprops=dict(color='black')))
+        boxplots.append(ax.boxplot(results_plot[i], sym='', positions=pos, widths=width, patch_artist=True, boxprops=dict(facecolor=f'C{i}'), medianprops=dict(color='black')))
         lines.append(ax.plot(np.arange(num_intervals+1) - 7/6*width, (num_intervals+1)*[aE[i]], linestyle='dashed', label=f'{reference_maps[i]} aE'))
     
     ax.set_xticks(tick_positions, labels=['' if i % 2 == 0 else f'{interval_bounds[int(i/2)]}-{interval_bounds[int(i/2)+1]}' for i in range(2*len(interval_bounds)-1)])
     ax.set_xlabel(f'Distance to {feature.capitalize()} (m)')
     ax.set_ylabel('Error (m)')
     ax.set_title(f'ETH and GLAD Maps Evaluated by Distance to {feature.capitalize()}')
-    ax.legend([boxplots[0]['boxes'][0], boxplots[1]['boxes'][0], lines[0][0], lines[1][0]], [reference_maps[0], reference_maps[1], f'{reference_maps[0]} aE', f'{reference_maps[1]} aE'], loc='upper right')
+    ax.legend([boxplots[0]['boxes'][0], boxplots[1]['boxes'][0], lines[0][0], lines[1][0]], [reference_maps[0], reference_maps[1], f'{reference_maps[0]} aE', f'{reference_maps[1]} aE'], ncols=2)
     
     for i in range(len(ax.xaxis.get_major_ticks())):
         if i % 2 != 0:
             ax.xaxis.get_major_ticks()[i].tick1line.set_visible(False)
     
-    plt.savefig(f'ETH-and-GLAD-maps-evaluated-by-{feature}-distance-{resolution}m.png', bbox_inches='tight', pad_inches=0.1)
+    plt.savefig(f'figures/ETH-and-GLAD-maps-evaluated-by-{feature}-distance-{resolution}m.png', bbox_inches='tight', pad_inches=0.1)
     print(f'Plotted results by {feature} distance')
 
 if __name__ == '__main__':
