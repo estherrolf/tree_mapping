@@ -36,11 +36,10 @@ sentinel_tiles_per_site = {'KaringaniMassingirDevNode':1,
                            'KaringaniSouthNorthDevNode':0,
                            'Mbilu':0}  
 
-
-def crop_sentinel_to_karingani_data(resolution=10, buffer=40):
+def crop_sentinel_to_karingani_data(resolution, buffer=40):
+    '''Matches sentinel to CHM files'''
     lidar_dir = f'{project_dir}/data/int/lidar/lidar_by_site_32736_{resolution}m' # where to read data from
     sentinel_by_site_dir = f'{project_dir}/data/int/sentinel/sentinel_by_site_32736_{resolution}m'
-    # match sentinel to chm files
     sites = os.listdir(lidar_dir)
 
     for site in sites:
@@ -52,53 +51,17 @@ def crop_sentinel_to_karingani_data(resolution=10, buffer=40):
 
         for band_tiff in os.listdir(sentinel_tile_dir):
             band_tiff_path = f'{sentinel_tile_dir}/{band_tiff}'
-            cropped_band_tiff_path = f'{sentinel_by_site_dir}/{site}/{band_tiff}'
+            tiff_name_updated_resolution = '_'.join(band_tiff.split('_')[:-1]) + f'_{resolution}m.tif'
+            cropped_band_tiff_path = f'{sentinel_by_site_dir}/{site}/{tiff_name_updated_resolution}'
 
             match_input_to_target_tif(input_fn=band_tiff_path, 
                                       output_fn=cropped_band_tiff_path, 
                                       target_fn=lidar_site_tiff, 
-                                      resampling='near',
+                                      resampling='cubic',
                                       pixel_buffer=buffer,
                                       output_type='int16',
-                                      verbose=True)
-
-# def process_alos_to_sentinel_site_data(sentinel_by_site_dir, 
-#                                        chunked_alos_dir, 
-#                                        merged_alos_fn,
-#                                        buffer=0,
-#                                        verbose=True):
-    
-#     # match sentinel to chm files
-#     target_sites = os.listdir(sentinel_by_site_dir)
-    
-#     if not os.path.exists(f'{chunked_alos_dir}'):
-#         os.mkdir(f'{chunked_alos_dir}')
-            
-#     for site in target_sites:
-#         this_dir = os.path.join(sentinel_by_site_dir, site)
-#         target_fn = [x for x in os.listdir(this_dir) if x.endswith('B02_10m.tif')][0]
-  
-#         if verbose: print(site)
-#         if not os.path.exists(f'{chunked_alos_dir}/{site}'):
-#             os.mkdir(f'{chunked_alos_dir}/{site}')
-            
-#         input_fp = merged_alos_fn
-#         output_fp = f'{chunked_alos_dir}/{site}/{merged_alos_fn.split('/')[-1]}'
-#         target_fp = os.path.join(this_dir,target_fn)
-
-#         match_input_to_target_tif(input_fp, 
-#                                       output_fp, 
-#                                       target_fp, 
-#                                       resampling='near',
-#                                       pixel_buffer = buffer,
-#                                       output_type='int16',
-#                                       verbose=verbose)
+                                      verbose=False)
 
 if __name__  == '__main__':
-    resolution = 30    
-    crop_sentinel_to_karingani_data(resolution)
-
-    # chunked_alos_dir = os.path.join(DATA_DIR, 'int/alos/alos_by_site_20_FNF')
-    # if not os.path.exists(os.path.join(DATA_DIR, 'int/alos')): os.mkdir(os.path.join(DATA_DIR, 'int/alos'))
-    # merged_alos_fn = os.path.join(DATA_DIR, 'raw/alos/Karingani_merged_20_FNF/Karingani_merged_20_C.tif')
-    # process_alos_to_sentinel_site_data(sentinel_by_site_dir, chunked_alos_dir, merged_alos_fn)
+    crop_sentinel_to_karingani_data(resolution=10)
+    crop_sentinel_to_karingani_data(resolution=30)
