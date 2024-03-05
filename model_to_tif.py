@@ -15,7 +15,7 @@ from torchgeo.samplers import GridGeoSampler
 from trainers.regression_with_nans import PixelwiseRegressionTask
 from utils import get_project_dir
 
-DATA_DIR = get_project_dir()
+DATA_DIR = os.path.join(get_project_dir(), 'data')
 sentinel_layer_codes = {'b': 'B02',
                         'g': 'B03',
                         'r': 'B04',
@@ -72,10 +72,11 @@ def predict_site_with_model(site_id,
                             nodata_value = -9999.,
                             img_nodata_value = -9999.,
                             nodata_pad= 5,
-                            device='cuda',
-                            data_dir='data'):
+                            model_is_random_forest=False,
+                            device='cuda'):
 
-    model = model.to(device).eval()                              
+    if not model_is_random_forest:
+        model = model.to(device).eval()                              
     pad = pred_args['padding']
     
     dataset = make_site_dataset(site_id, 
@@ -103,21 +104,30 @@ def predict_site_with_model(site_id,
 
     # modification of code from Caleb
     for batch in dl_enumerator:
-            images = batch['image'].to(device)
             bboxes = batch['bbox']
-
-            with torch.inference_mode():
-                predictions = model(images)
-                predictions = predictions[:,0].cpu().numpy()
-
-                #anything within pad pixels of a nodata img pixels gets a nodata label
-                img_nodata_ = (images == img_nodata_value).any(dim=1).cpu().numpy().astype(float)
-                padder = torch.nn.modules.Conv2d(in_channels=1, out_channels=1, kernel_size=nodata_pad*2+1, stride=1, padding=0)
-                
-                padder.weight = torch.nn.Parameter(torch.ones_like(padder.weight), requires_grad=False)
+            if model_is_random_forest:
+                images = batch['image']
+                predictions = []
+                for image in images:
+                    pred = np.vstack([model.predict(image[:,i].transpose(1,0)) for i in range(image.shape[1])])
+                    predictions.append(pred)
+                    
+            else: # pytorch model
+                images = batch['image'].to(device)
             
-                img_nodata_padded = padder(torch.Tensor(img_nodata_)).cpu().numpy()
-                predictions[:,nodata_pad:-nodata_pad, nodata_pad:-nodata_pad][img_nodata_padded > 1 ] = nodata_value
+                with torch.inference_mode():
+
+                    predictions = model(images)
+                    predictions = predictions[:,0].cpu().numpy()
+
+                    #anything within pad pixels of a nodata img pixels gets a nodata label
+                    img_nodata_ = (images == img_nodata_value).any(dim=1).cpu().numpy().astype(float)
+                    padder = torch.nn.modules.Conv2d(in_channels=1, out_channels=1, kernel_size=nodata_pad*2+1, stride=1, padding=0)
+
+                    padder.weight = torch.nn.Parameter(torch.ones_like(padder.weight), requires_grad=False)
+
+                    img_nodata_padded = padder(torch.Tensor(img_nodata_)).cpu().numpy()
+                    predictions[:,nodata_pad:-nodata_pad, nodata_pad:-nodata_pad][img_nodata_padded > 1 ] = nodata_value
 
             for i in range(len(bboxes)):
                 bb = bboxes[i]
