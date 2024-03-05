@@ -8,11 +8,11 @@ import yaml
 from lightning.pytorch.callbacks import EarlyStopping, ModelCheckpoint
 from lightning.pytorch.loggers import TensorBoardLogger
 from lightning.pytorch import Trainer
-
-from datamodules.chm_datamodule import ChmDataModule, transforms_4_channel_rgbnir_plus_mask_imagestats, transforms_12_channel_plus_mask_imagestats, transforms_12_channel_latllon_plus_mask_imagestats
+from datamodules.chm_datamodule import ChmDataModule, get_default_layers_and_transforms
 from experiment_utils import get_site_splits
 from trainers.regression_with_nans import PixelwiseRegressionTask
 from utils import get_project_dir
+
 
 def setup_chm_datamodule(sites_per_split, cfg_data):
     train_sites = sites_per_split['train_sites']
@@ -20,17 +20,7 @@ def setup_chm_datamodule(sites_per_split, cfg_data):
     test_sites = sites_per_split['test_sites']
     num_image_channels = cfg_data['num_image_channels']
     
-    if num_image_channels == 4:
-        data_layers = ['r', 'g', 'b', 'nir', 'vis', 'chm']
-        batch_transforms = transforms_4_channel_rgbnir_plus_mask_imagestats
-    elif num_image_channels == 12:
-        data_layers = ['B01', 'B02', 'B03', 'B04', 'B05', 'B06', 'B07', 'B08', 'B8A', 'B09', 'B11', 'B12'] + ['vis', 'chm']
-        batch_transforms = transforms_12_channel_plus_mask_imagestats
-    elif num_image_channels == 15:
-        data_layers = ['B01', 'B02', 'B03', 'B04', 'B05', 'B06', 'B07', 'B08', 'B8A', 'B09', 'B11', 'B12'] + ['vis', 'chm']
-        batch_transforms = transforms_12_channel_latllon_plus_mask_imagestats
-    else:
-        print(f'No directive for {num_image_channels} image channels')
+    data_layers, batch_transforms = get_default_layers_and_transforms(num_image_channels)
 
     chm = ChmDataModule(train_sites=train_sites, 
                         val_sites=val_sites, 
