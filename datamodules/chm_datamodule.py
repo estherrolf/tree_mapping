@@ -50,7 +50,7 @@ def get_default_layers_and_transforms(num_image_channels):
     if num_image_channels == 3:
         data_layers = ['r', 'g', 'b', 'vis', 'chm']
         batch_transforms = transforms_3_channel_rgbnir_plus_mask_imagestats
-    if num_image_channels == 4:
+    elif num_image_channels == 4:
         data_layers = ['r', 'g', 'b', 'nir', 'vis', 'chm']
         batch_transforms = transforms_4_channel_rgbnir_plus_mask_imagestats
     elif num_image_channels == 12:
@@ -171,7 +171,7 @@ def transforms_12_channel_plus_mask_imagestats(sample, img_nodata_val=-9999., ma
     sample['image'][:,img_nodata_mask] = img_nodata_val
     return sample
 
-def transforms_4_channel_rgbnir_plus_mask_imagestats(sample, img_nodata_val=-9999., mask_nodata_val=-9999., use_image_stats=True):
+def transforms_3_channel_rgbnir_plus_mask_imagestats(sample, img_nodata_val=-9999., mask_nodata_val=-9999., use_image_stats=True):
     img_nodata_mask = (sample['image'][:3] == img_nodata_val).any(axis=0)
     
     # sixth band is the label, separate it 
