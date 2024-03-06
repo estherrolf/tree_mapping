@@ -2,7 +2,6 @@
 from osgeo import gdal
 import geo_utils
 import os
-import matplotlib.pyplot as plt
 import rasterio
 import sys
 
@@ -13,6 +12,7 @@ data_dir = f'{get_project_dir()}/data'
 
 def merge_ETH_maps():
     '''Merges the two ETH data files into one'''
+
     eth_tiles = [f'{data_dir}/raw/global_tch_maps/eth/ETH_GlobalCanopyHeight_10m_2020_S24E030_Map.tif',
                  f'{data_dir}/raw/global_tch_maps/eth/ETH_GlobalCanopyHeight_10m_2020_S27E030_Map.tif']
     global_map_dir = f'{data_dir}/int/global_tch_maps'
@@ -23,20 +23,23 @@ def merge_ETH_maps():
 
 def set_NaN_GLAD_map():
     '''Sets pixel values corresponding to water, snow, ice, or NaNs to a new NaN value of 255'''
-    glad_tiff = f'{data_dir}/raw/global_tch_maps/Forest_height_2019_SAFR.tif'
 
-    with rasterio.open(glad_tiff) as file:
-        metadata = file.meta
-        tiff_array = file.read()
-        tiff_array[tiff_array > 100] = 255 # sets values of 101 (water), 102 (snow/ice), and 103 (NaN) to a new NaN value of 255
+    glad_tiff = rasterio.open(f'{data_dir}/raw/global_tch_maps/Forest_height_2019_SAFR.tif')
+    glad_tiff_metadata = glad_tiff.meta
+    glad_tiff_array = glad_tiff.read()
+    glad_tiff_array[glad_tiff_array > 100] = 255 # sets values of 101 (water), 102 (snow/ice), and 103 (NaN) to a new NaN value of 255
 
-        with rasterio.open(f'{data_dir}/raw/global_tch_maps/Forest_height_2019_SAFR_processed.tif', 'w', **metadata) as out_file:
-            out_file.write(tiff_array)
-    
+    processed_tiff_metadata = glad_tiff_metadata.copy()
+    processed_tiff_metadata['nodata'] = 255
+
+    with rasterio.open(f'{data_dir}/raw/global_tch_maps/Forest_height_2019_SAFR_processed.tif', 'w', **processed_tiff_metadata) as out_file:
+        out_file.write(glad_tiff_array)
+
     print('GLAD tiff NaN set')
 
 def make_per_site_files(map, map_tiff, resolution):
     '''Makes per-site files for the ETH and GLAD maps to match the coarsened LiDAR data'''
+
     ref_data_dir = f'{data_dir}/existing_reference_data'
     global_map_by_site_dir = f'{ref_data_dir}/{map}_maps_per_site_{resolution}m'
     os.makedirs(global_map_by_site_dir, exist_ok=True)
@@ -53,16 +56,19 @@ def make_per_site_files(map, map_tiff, resolution):
                                             resampling='average',
                                             src_nodata='255',
                                             output_nodata='-9999.0')
-    
-    print('Generated per-site files for {map}')
+
+    print(f'Generated per-site files for {map}')
 
 if __name__ == '__main__':
     merge_ETH_maps()
-    crop_GLAD_map()
-    
+    set_NaN_GLAD_map()
+
+    eth_tiff_path = f'{data_dir}/int/global_tch_maps/ETH_GlobalCanopyHeight_10m_merged.tif'
+    glad_tiff_path = f'{data_dir}/raw/global_tch_maps/Forest_height_2019_SAFR_processed.tif'
+
     for resolution in [10, 30]:
-        make_per_site_files(map='eth', map_tiff=f'{data_dir}/int/global_tch_maps/ETH_GlobalCanopyHeight_10m_merged.tif', resolution=resolution)
-        make_per_site_files(map='glad', map_tiff=f'{data_dir}/raw/global_tch_maps/Forest_height_2019_SAFR_processed.tif', resolution=resolution)
-    
-    os.remove(f'{data_dir}/int/global_tch_maps/ETH_GlobalCanopyHeight_10m_merged.tif')
-    os.remove(f'{data_dir}/raw/global_tch_maps/Forest_height_2019_SAFR_processed.tif')
+        make_per_site_files(map='eth', map_tiff=eth_tiff_path, resolution=resolution)
+        make_per_site_files(map='glad', map_tiff=glad_tiff_path, resolution=resolution)
+
+    os.remove(eth_tiff_path)
+    os.remove(glad_tiff_path)
