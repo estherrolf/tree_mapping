@@ -42,6 +42,21 @@ s2_12_channel_plus_latlon_codes = s2_12_channel_codes + ['lat', 'sin(lon)', 'cos
 sentinel_layer_means_12_channel_plus_latlon = [S2_stats_by_channel[channel]['mean'] for channel in s2_12_channel_plus_latlon_codes]
 sentinel_layer_stds_12_channel_plus_latlon = [S2_stats_by_channel[channel]['std'] for channel in s2_12_channel_plus_latlon_codes]
 
+def get_default_layers_and_transforms(num_image_channels):
+    if num_image_channels == 4:
+        data_layers = ['r', 'g', 'b', 'nir', 'vis', 'chm']
+        batch_transforms = transforms_4_channel_rgbnir_plus_mask_imagestats
+    elif num_image_channels == 12:
+        data_layers = ['B01', 'B02', 'B03', 'B04', 'B05', 'B06', 'B07', 'B08', 'B8A', 'B09', 'B11', 'B12'] + ['vis', 'chm']
+        batch_transforms = transforms_12_channel_plus_mask_imagestats
+    elif num_image_channels == 15:
+        data_layers = ['B01', 'B02', 'B03', 'B04', 'B05', 'B06', 'B07', 'B08', 'B8A', 'B09', 'B11', 'B12'] + ['vis', 'chm']
+        batch_transforms = transforms_12_channel_latllon_plus_mask_imagestats
+    else:
+        print(f'No directive for {num_image_channels} image channels')
+        
+    return data_layers, batch_transforms
+
 def degree_to_radian(x):
         return (2 * np.pi) * x / 360.  
     

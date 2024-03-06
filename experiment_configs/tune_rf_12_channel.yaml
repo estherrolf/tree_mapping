@@ -1,0 +1,24 @@
+# lightning.pytorch==2.0.0
+seed_training: 100
+splits_to_do:
+  - 0
+  - 1
+  - 2 
+  - 3
+exp_name: 'tune_rf'
+version_id_base: '12_channel'
+data:
+  split_seed: 10
+  num_image_channels: 12
+  datamodule:
+    batch_size: 128
+    patch_size: 64
+    length: 10000
+    num_workers: 12
+    eval_pad: 0
+task:
+  model: 'random_forest'
+  criterion: 'squared_error'
+  in_channels: 12
+  random_seed: 0
+    
