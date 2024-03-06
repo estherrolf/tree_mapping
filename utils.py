@@ -22,116 +22,10 @@ def tiff_to_array(path):
     return array
 
 def compare_tiffs(tiff_1_path, tiff_2_path):
-    tiff_1_array = tiff_to_array(tiff_1_path).ravel()
-    tiff_2_array = tiff_to_array(tiff_2_path).ravel()
-    # for i in range(len(tiff_1_array)):
-    #     if tiff_1_array[i] != tiff_2_array[i]:
-    #         print(i, tiff_1_array[i], tiff_2_array[i])
+    tiff_1_array = tiff_to_array(tiff_1_path)
+    tiff_2_array = tiff_to_array(tiff_2_path)
+
     return (tiff_1_array == tiff_2_array).all()
-
-# if __name__ == '__main__':
-    # print(compare_tiffs(f'{get_project_dir()}/data/int/global_tch_maps/ETH_GlobalCanopyHeight_10m_merged_Float32.tif', f'{get_project_dir()}/data/int/global_tch_maps/ETH_GlobalCanopyHeight_10m_merged.tif'))
-    # for tiff in os.listdir(f'{get_project_dir()}/data/existing_reference_data/eth_maps_per_site_10m'):
-    #     print(compare_tiffs(f'{get_project_dir()}/data/existing_reference_data/eth_maps_per_site_10m-byte/{tiff}', f'{get_project_dir()}/data/existing_reference_data/eth_maps_per_site_10m/{tiff}'))
-    # for tiff in os.listdir(f'{get_project_dir()}/data/existing_reference_data/glad_maps_per_site_10m'):
-    #     print(compare_tiffs(f'{get_project_dir()}/data/existing_reference_data/glad_maps_per_site_10m-byte/{tiff}', f'{get_project_dir()}/data/existing_reference_data/glad_maps_per_site_10m/{tiff}'))
-
-    # print(compare_tiffs(f'{get_project_dir()}/data/raw/global_tch_maps/Forest_height_2019_SAFR_cropped_warp.tif', f'{get_project_dir()}/data/raw/global_tch_maps/Forest_height_2019_SAFR_cropped.tif'))
-    # print(compare_tiffs(f'{get_project_dir()}/lidar_sites_merged_warp.tif', f'{get_project_dir()}/lidar_sites_merged.tif'))
-    # print(compare_tiffs(f'{get_project_dir()}/data/raw/global_tch_maps/Forest_height_2019_SAFR_cropped_float32.tif', f'{get_project_dir()}/data/raw/global_tch_maps/Forest_height_2019_SAFR_cropped.tif'))
-    # print(np.max(tiff_to_array(f'{get_project_dir()}/data/raw/global_tch_maps/Forest_height_2019_SAFR_cropped_no-r.tif')))
-    # for tiff in os.listdir(f'{get_project_dir()}/data/raw/lidar_by_site_32736_merged'):
-    #     print(compare_tiffs(f'{get_project_dir()}/data/raw/lidar_by_site_32736_merged/{tiff}', f'{get_project_dir()}/data/raw/lidar_by_site_32736_merged_noquotes/{tiff}'))
-    # print(compare_tiffs(f'{get_project_dir()}/data/int/global_tch_maps/ETH_GlobalCanopyHeight_10m_merged-warp.tif', f'{get_project_dir()}/data/int/global_tch_maps/ETH_GlobalCanopyHeight_10m_merged-og.tif'))
-
-def compare():
-    sites = os.listdir('../../../tambe_lab/Users/luciagordon/tree_mapping_email/data/int/lidar/lidar_by_site_32736_10m')
-
-    for site in sites:
-        my_10m_feb19 = f'../../../tambe_lab/Users/luciagordon/tree_mapping_feb19/data/int/lidar/lidar_by_site_32736_10m/{site}/{site}_CHM_10m.tif'
-        my_30m_feb19 = f'../../../tambe_lab/Users/luciagordon/tree_mapping_feb19/data/int/lidar/lidar_by_site_32736_30m/{site}/{site}_CHM_30m.tif'
-
-        my_10m = f'../../../tambe_lab/Users/luciagordon/tree_mapping_warp/data/int/lidar/lidar_by_site_32736_10m/{site}/{site}_CHM_10m.tif'
-        my_30m = f'../../../tambe_lab/Users/luciagordon/tree_mapping_warp/data/int/lidar/lidar_by_site_32736_30m/{site}/{site}_CHM_30m.tif'
-
-        # her_10m = f'../../../tambe_lab/Everyone/Karingani_data/esther_10m_30m_using_lucias1m/int/lidar/lidar_by_site_32736_10m/{site}/{site}_CHM_10m.tif'
-        # her_30m = f'../../../tambe_lab/Everyone/Karingani_data/esther_10m_30m_using_lucias1m/int/lidar/lidar_by_site_32736_30m/{site}/{site}_CHM_30m.tif'
-
-        # mine = f'../../../tambe_lab/Users/luciagordon/tree_mapping_feb_16/data/raw/lidar_by_site_32736/{site}_CHM_1m_merged.tif'
-        # mine2 = f'../../../tambe_lab/Users/luciagordon/tree_mapping_feb_15/data/raw/lidar_by_site_32736/{site}_CHM_1m_merged.tif'
-
-        mine_feb19 = f'../../../tambe_lab/Users/luciagordon/tree_mapping_feb19/data/raw/lidar_by_site_32736/{site}_CHM_1m_merged.tif'
-        mine_mergetifs = f'../../../tambe_lab/Users/luciagordon/tree_mapping_merge_tifs/data/raw/lidar_by_site_32736/{site}_CHM_1m_merged.tif'
-        mine_warp = f'../../../tambe_lab/Users/luciagordon/tree_mapping_warp/data/raw/lidar_by_site_32736/{site}_CHM_1m_merged.tif'
-        hers_feb15 = f'../../../tambe_lab/Everyone/Karingani_data/esther_generated_feb15/raw/lidar_by_site_32736/{site}_CHM_1m_merged.tif'
-        hers_mergetifs = f'../../../tambe_lab/Everyone/Karingani_data/esther_feb16_mergetifs_envvars/raw/lidar_by_site_32736/{site}_CHM_1m_merged.tif'
-        hers_warp = f'../../../tambe_lab/Everyone/Karingani_data/esther_feb16_warp/raw/lidar_by_site_32736/{site}_CHM_1m_merged.tif'
-
-        # hers = f'../../../tambe_lab/Everyone/Karingani_data/esther_chm_merging_jan22_2024/raw/lidar_by_site_32736/KaringaniSite0{site}_CHM_1m_merged.tif'
-        # hers_old = f'../../../tambe_lab/Everyone/Karingani_data/esther_chm_merging_jan11_2024/raw/lidar_by_site_32736/KaringaniSite0{site}_CHM_1m_merged.tif'
-        # this = f'../../../tambe_lab/Users/luciagordon/tree-mapping-v1/data/raw/lidar_by_site_32736/KaringaniSite0{site}_CHM_1m_merged.tif'
-
-        # mine = f'../../../tambe_lab/Users/luciagordon/tree_mapping_test/data/int/lidar/lidar_by_site_32736_10m/KaringaniSite0{site}/KaringaniSite0{site}_CHM_10m.tif'
-        # hers = f'../../../tambe_lab/Everyone/Karingani_data/esther_lidar_outputs_dec_19/lidar_by_site_32736_10m/KaringaniSite0{site}/KaringaniSite0{site}_CHM_10m.tif'
-        # this = f'../../../tambe_lab/Users/luciagordon/tree-mapping-v1/data/int/lidar/lidar_by_site_32736_10m/KaringaniSite0{site}/KaringaniSite0{site}_CHM_10m.tif'
-        # print(rasterio.__version__) # 1.3.9
-
-        # my_10m_feb19_arr = tiff_to_array(my_10m_feb19)
-        # my_30m_feb19_arr = tiff_to_array(my_30m_feb19)
-
-        # mine_feb19_arr = tiff_to_array(mine_feb19)
-        # mine_mergetifs_arr = tiff_to_array(mine_mergetifs)
-        # mine_warp_arr = tiff_to_array(mine_warp)
-        # hers_feb15_arr = tiff_to_array(hers_feb15)
-        # hers_mergetifs_arr = tiff_to_array(hers_mergetifs)
-        # hers_warp_arr = tiff_to_array(hers_warp)
-
-        # my_10m_arr = tiff_to_array(my_10m)
-        # my_30m_arr = tiff_to_array(my_30m)
-
-        # her_10m_arr = tiff_to_array(her_10m)
-        # her_30m_arr = tiff_to_array(her_30m)
-
-
-        # print((my_arr == my_arr2).all())
-        # print(site)
-        # print('mine 10m', (my_10m_feb19_arr == my_10m_arr).all())
-        # print('mine 30m', (my_30m_feb19_arr == my_30m_arr).all())
-        # print('my feb19 my warp', (mine_feb19_arr == mine_warp_arr).all())
-        # print('my mergetifs my warp', (mine_mergetifs_arr == mine_warp_arr).all())
-        # print('mine merge tiffs hers merge tiffs', (mine_mergetifs_arr == hers_mergetifs_arr).all())
-        # print('mine hers warp', (mine_warp_arr == hers_warp_arr).all())
-        # print('hers feb 15 hers merge tiffs', (hers_feb15_arr == hers_mergetifs_arr).all())
-        # print('hers feb 15 hers warp', (hers_feb15_arr == hers_warp_arr).all())
-        # print('hers mergetifs hers warp', (hers_mergetifs_arr == hers_warp_arr).all())
-        # print('10m', (my_10m_arr == her_10m_arr).all())
-        # print('30m', (my_30m_arr == her_30m_arr).all())
-    my_eth_warp = '../../../tambe_lab/Users/luciagordon/tree_mapping/data/int/global_tch_maps/ETH_GlobalCanopyHeight_10m_merged-2.tif'
-    my_eth = '../../../tambe_lab/Users/luciagordon/tree_mapping/data/int/global_tch_maps/ETH_GlobalCanopyHeight_10m_merged.tif'
-    her_eth = '../../../tambe_lab/Everyone/Karingani_data/ETH_GlobalCanopyHeight_10m_merged.tif'
-    my_SAFR = '../../../tambe_lab/Users/luciagordon/tree_mapping/data/raw/global_tch_maps/Forest_height_2019_SAFR_cropped.tif'
-    her_SAFR = '../../../tambe_lab/Everyone/Karingani_data/Forest_height_2019_SAFR_cropped_2.tif'
-
-    # her_arr = tiff_to_array(hers)
-    # her_old_arr = tiff_to_array(hers_old)
-    # this_arr = tiff_to_array(this)
-
-    my_eth_warp_arr = tiff_to_array(my_eth_warp)
-    my_eth_arr = tiff_to_array(my_eth)
-    # her_eth_arr = tiff_to_array(her_eth)
-    # my_safr_arr = tiff_to_array(my_SAFR)
-    # her_safr_arr = tiff_to_array(her_SAFR)
-
-    print((my_eth_arr == my_eth_warp_arr).all())
-    # print((my_eth_arr == her_eth_arr).all())
-    # print((my_safr_arr == her_safr_arr).all())
-
-    # print((her_arr == hers_today_arr).all())
-    # print((my_arr == her_arr).all())
-    # print((her_arr == her_old_arr).all())
-
-    # print((this_arr == her_arr).all())
-    # print((this_arr == my_arr).all())
 
 def check_percentage_data_in_range(resolution):
     '''check what % of the 10m data is outside the 0-30 m height range'''
@@ -145,12 +39,6 @@ def check_percentage_data_in_range(resolution):
             site_labels = file.read().ravel()
             num_points_in_range += len(np.where((site_labels >= 0) & (site_labels <= 30))[0])
             total_points += len(np.where(site_labels != -9999)[0])
-            # for label in site_labels:
-            #     if label < 0:
-            #         if np.isnan(label): 
-            #             print(label)
-            # total_points += np.count_nonzero(~np.isnan(site_labels))
-            # total_points += len(site_labels)
 
     print(f'Percentage of points in range = {100*num_points_in_range/total_points}')
 
@@ -228,8 +116,94 @@ def histogram(resolution):
     plt.savefig(f'histogram_{resolution}m.png', bbox_inches='tight', pad_inches=0.1)
     plt.close() # close the image to save memory
 
+def plot_tiff(path):
+    array = tiff_to_array(path)
+
+    plt.figure(dpi=300)
+    plt.imshow(array) # plot the array of pixel values as an image
+    plt.axis('off') # remove axes        
+    plt.savefig(f'{path.split("/")[-1].split(".")[0]}.png', bbox_inches='tight', pad_inches=0)
+    plt.close() # close the image to save memory
+
+def find_large_values():
+    lidar_1m_merged_dir = f'{get_project_dir()}/data/raw/lidar_by_site_32736_merged'
+    lidar_1m_merged_tiffs = os.listdir(lidar_1m_merged_dir)
+    box_size = 100
+
+    for tiff in lidar_1m_merged_tiffs:
+        tiff_array = rasterio.open(f'{lidar_1m_merged_dir}/{tiff}').read(1)
+        where_above_30 = np.array(np.argwhere(tiff_array > 30))
+        print(f'{tiff}, number of pixels above 30 = {len(where_above_30)}')
+
+        if len(where_above_30) > 0:
+            for row, col in where_above_30:
+                    print(tiff_array[row, col])
+                    for i in range(row-box_size, row+box_size+1):
+                        for j in range(col-box_size, col+box_size+1):
+                            if (i == row-box_size or i == row+box_size) or (j == col-box_size or j == col+box_size):
+                                tiff_array[i][j] = 0
+        
+            plt.figure(dpi=300)
+            plt.imshow(tiff_array)
+            plt.set_cmap('inferno')
+            plt.axis('off') # remove axes        
+            plt.savefig(f'{tiff.split(".")[0]}_large_vals_boxed.png', bbox_inches='tight', pad_inches=0)
+            plt.close() # close the image to save memory
+
+def get_max_height_near_river():
+    distances_to_river_10m_dir = '../../../tambe_lab/Users/luciagordon/tree_mapping/data/features/river/distances_to_river_10m'
+    sites = [array_name.split('_')[0] for array_name in os.listdir(distances_to_river_10m_dir)]
+    all_values_near_river = []
+
+    for site in sites:
+        coords_near_river = np.argwhere(np.load(f'{distances_to_river_10m_dir}/{site}_distances_to_river_10m.npy') <= 500) # distance to river = n x 10
+        values_near_river = tiff_to_array(f'../../../tambe_lab/Users/luciagordon/tree_mapping/data/int/lidar/lidar_by_site_32736_10m/{site}/{site}_CHM_10m.tif')[coords_near_river[:, 0], coords_near_river[:, 1]]
+        all_values_near_river += list(values_near_river)
+    
+    print(max(all_values_near_river), len(np.argwhere(np.array(all_values_near_river) > 30)))
+
 if __name__ == '__main__':
     # plot_distance_to_feature(feature='river', resolution=10)
     # get_CHM_values(resolution=30)
-    plot_distance_to_feature(feature='river', resolution=30)
+    # plot_distance_to_feature(feature='river', resolution=30)
     # histogram(resolution=30)
+    # plot_tiff('../../../tambe_lab/Users/luciagordon/tree_mapping/data/int/sentinel/sentinel_by_site_32736_10m/KaringaniSite01/T36KUU_20210513T073609_B01_10m.tif')
+    # plot_tiff('../../../tambe_lab/Users/luciagordon/rhino-midden-detector/firestorm-4/thermal.tif')
+    # get_max_height_near_river()
+    sites = os.listdir('../../../tambe_lab/Users/luciagordon/tree_mapping/data/int/lidar/lidar_by_site_32736_10m')
+    resolution = 10
+
+    for site in sites:
+        if site in sites:
+            print(site)
+
+            site_1m = rasterio.open(f'../../../tambe_lab/Users/luciagordon/tree_mapping/data/raw/lidar_by_site_32736/{site}_CHM_1m_merged.tif').read(1)
+            site_10m = rasterio.open(f'../../../tambe_lab/Users/luciagordon/tree_mapping/data/int/lidar/lidar_by_site_32736_10m/{site}/{site}_CHM_10m.tif').read(1)
+            site_30m = rasterio.open(f'../../../tambe_lab/Users/luciagordon/tree_mapping/data/int/lidar/lidar_by_site_32736_30m/{site}/{site}_CHM_30m.tif').read(1)
+
+            print(np.amin(site_1m[site_1m != -9999.0]))
+            print(np.amax(site_1m))
+            if np.amax(site_10m) > np.amax(site_1m): print('10m bigger')
+            if np.amax(site_30m) > np.amax(site_1m): print('30m bigger')
+            # print(np.amax(site_1m), np.amax(site_10m), np.amax(site_30m))
+
+            # warp = rasterio.open(f'../../../tambe_lab/Users/luciagordon/tree_mapping/data/int/lidar/lidar_by_site_32736_10m/{site}/{site}_CHM_10m.tif')
+            # print(warp.meta)
+            # warp_array = warp.read(1)
+            # ref_bounds = warp.bounds
+
+            # mine = rasterio.open(f'../../../tambe_lab/Users/luciagordon/tree_mapping/data/int/lidar/lidar_by_site_32736_10m_perc_mine/{site}/{site}_CHM_10m.tif')
+            # mine_pad = rasterio.open(f'../../../tambe_lab/Users/luciagordon/tree_mapping/data/int/lidar/lidar_by_site_32736_10m_perc_mine_pad/{site}/{site}_CHM_10m.tif')
+            # print((mine.read(1) == mine_pad.read(1)).all())
+            # print(mine.meta)
+            # window = rasterio.windows.from_bounds(ref_bounds.left, ref_bounds.bottom, ref_bounds.right, ref_bounds.top, mine.transform)
+            # mine_cropped_array = mine.read(indexes=1, window=window)
+            # print((warp_array == mine_cropped_array).all())
+            # counter = 0
+            # for i in range(warp_array.shape[0]):
+            #     for j in range(warp_array.shape[1]):
+            #         if warp_array[i][j] != mine_cropped_array[i][j]:
+            #             print(i, j, warp_array[i][j], mine_cropped_array[i][j])
+            #             counter += 1
+            # print(counter)
+            # print(warp_array.shape, mine_cropped_array.shape)
