@@ -9,8 +9,8 @@ data:
   split_seed: 10
   num_image_channels: 12
   datamodule:
-    batch_size: 64
-    patch_size: 96
+    batch_size: 128
+    patch_size: 64
     length: 10000
     num_workers: 12
     eval_pad: 5
@@ -28,7 +28,7 @@ task:
     
 trainer:
   min_epochs: 1
-  max_epochs: 100
+  max_epochs: 200
   accelerator: 'gpu'
   devices:
-    - 2
+    - 0
