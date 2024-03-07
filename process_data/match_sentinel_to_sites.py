@@ -34,10 +34,11 @@ sentinel_tiles_per_site = {'KaringaniMassingirDevNode':1,
                            'KaringaniSungoloDevNode':1,
                            'KaringaniSouthSouthDevNode':0,
                            'KaringaniSouthNorthDevNode':0,
-                           'Mbilu':0}  
+                           'Mbilu':0}
 
 def crop_sentinel_to_karingani_data(resolution, buffer=40):
     '''Matches sentinel to CHM files'''
+
     lidar_dir = f'{project_dir}/data/int/lidar/lidar_by_site_32736_{resolution}m' # where to read data from
     sentinel_by_site_dir = f'{project_dir}/data/int/sentinel/sentinel_by_site_32736_{resolution}m'
     sites = os.listdir(lidar_dir)
@@ -54,9 +55,9 @@ def crop_sentinel_to_karingani_data(resolution, buffer=40):
             tiff_name_updated_resolution = '_'.join(band_tiff.split('_')[:-1]) + f'_{resolution}m.tif'
             cropped_band_tiff_path = f'{sentinel_by_site_dir}/{site}/{tiff_name_updated_resolution}'
 
-            match_input_to_target_tif(input_fn=band_tiff_path, 
-                                      output_fn=cropped_band_tiff_path, 
-                                      target_fn=lidar_site_tiff, 
+            match_input_to_target_tif(input_fn=band_tiff_path,
+                                      output_fn=cropped_band_tiff_path,
+                                      target_fn=lidar_site_tiff,
                                       resampling='cubic',
                                       pixel_buffer=buffer,
                                       output_type='int16',

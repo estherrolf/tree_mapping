@@ -11,10 +11,9 @@ def read_config_file(config_yaml):
     return cfg
 
 def make_splits(num_sites, seed=0):
-    '''splits site numbers into four groups, where each group appears in exactly one test set, 
-    one val set, and two train sets'''
+    '''Splits site numbers into four groups, where each group appears in exactly one test set, one val set, and two train sets'''
 
-    random_state = np.random.RandomState(seed) # create a RandomState instance with a specific seed
+    random_state = np.random.RandomState(seed) # creates a RandomState instance with a specific seed
     random_order = random_state.choice(num_sites, num_sites, replace = False) # list of site numbers in random order
     l1 = num_sites // 4
     l2 = num_sites // 2
@@ -29,10 +28,11 @@ def make_splits(num_sites, seed=0):
     return split_orders
 
 def get_site_splits(random_seed, data_dir=f'{get_project_dir()}/data'):
-    '''get sites for train, validation and test set for four splits'''
+    '''Gets sites for train, validation, and test set for four splits'''
+
     non_hidden_dirs = [x for x in os.listdir(os.path.join(data_dir,'int/lidar/lidar_by_site_32736_10m')) if not x.startswith('.')]
     all_sites = np.sort(non_hidden_dirs)
-    split_orders = make_splits(num_sites = len(all_sites), seed = random_seed)
+    split_orders = make_splits(num_sites=len(all_sites), seed=random_seed)
     splits = {}
 
     for split_number, split_order in enumerate(split_orders):

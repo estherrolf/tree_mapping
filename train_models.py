@@ -1,18 +1,16 @@
 # imports
+from datamodules.chm_datamodule import ChmDataModule, get_default_layers_and_transforms
+from experiment_utils import get_site_splits
+from lightning.pytorch.callbacks import EarlyStopping, ModelCheckpoint
+from lightning.pytorch.loggers import TensorBoardLogger
+from lightning.pytorch import Trainer
+from trainers.regression_with_nans import PixelwiseRegressionTask
+from utils import get_project_dir
 import itertools
 import os
 import sys
 import torch
 import yaml
-
-from lightning.pytorch.callbacks import EarlyStopping, ModelCheckpoint
-from lightning.pytorch.loggers import TensorBoardLogger
-from lightning.pytorch import Trainer
-from datamodules.chm_datamodule import ChmDataModule, get_default_layers_and_transforms
-from experiment_utils import get_site_splits
-from trainers.regression_with_nans import PixelwiseRegressionTask
-from utils import get_project_dir
-
 
 def setup_chm_datamodule(sites_per_split, cfg_data):
     train_sites = sites_per_split['train_sites']
@@ -57,7 +55,8 @@ def train(datamodule, task, base_name, exp_name, version_id=None, **trainer_kwar
                       logger=logger,
                       num_sanity_val_steps=0,
                       **trainer_kwargs)
-
+    print('task', task)
+    print('datamodule', datamodule)
     trainer.fit(model=task, datamodule=datamodule)
     
 def run_experiment(config_fp, lr=None, weight_decay=None):
@@ -84,8 +83,8 @@ def run_experiment(config_fp, lr=None, weight_decay=None):
         sites_per_split = splits[split_number]
         chm = setup_chm_datamodule(sites_per_split, cfg['data'])
         chm_task = PixelwiseRegressionTask(**task)
-        version_id = f'{version_id_base}_split_{split_number}_seed_{split_seed}_lr_{lr}_wd_{weight_decay}' if lr is not None else f'{version_id_base}_split_{split_number}_seed_{split_seed}'
-
+        version_id = f'{version_id_base}_split_{split_number}_seed_{split_seed}_lr_{task["lr"]}_wd_{task["weight_decay"]}_channels_{task["in_channels"]}'
+        print(version_id)
         train(chm, chm_task, base_name, exp_name, version_id, **cfg['trainer'])
     
 if __name__ == '__main__':
@@ -95,5 +94,3 @@ if __name__ == '__main__':
         run_experiment(config_fp=sys.argv[1])
     else:
         run_experiment(config_fp=sys.argv[1], lr=float(sys.argv[2]), weight_decay=float(sys.argv[3]))
-
-

@@ -33,6 +33,7 @@ class DownloadSentinel:
             self.download_sentinel_tile(tile=tile)
 
         self.calculate_image_statistics(sentinel_dirs=[f'{self.sentinel_2021_dir}/{tile}' for tile in sentinel_tiles_karingani])
+        print('Calculated image statistics')
 
     def download_file_from_url(self, url, tile):
         response = requests.get(url, stream=True, timeout=20) # HTTP get request to given URL
