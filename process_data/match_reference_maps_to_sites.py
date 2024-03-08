@@ -57,7 +57,7 @@ def make_per_site_files(map, map_tiff, resolution):
                                             src_nodata='255',
                                             output_nodata='-9999.0')
 
-    print(f'Generated per-site files for {map}')
+    print(f'Generated per-site files for {map.upper()}')
 
 if __name__ == '__main__':
     merge_ETH_maps()
