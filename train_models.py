@@ -55,8 +55,8 @@ def train(datamodule, task, base_name, exp_name, version_id=None, **trainer_kwar
                       logger=logger,
                       num_sanity_val_steps=0,
                       **trainer_kwargs)
-    print('task', task)
-    print('datamodule', datamodule)
+    # print('task', task)
+    # print('datamodule', datamodule)
     trainer.fit(model=task, datamodule=datamodule)
     
 def run_experiment(config_fp, lr=None, weight_decay=None):

@@ -30,6 +30,7 @@ from torchvision.models._api import WeightsEnum
 from torchgeo.datasets import unbind_samples
 from torchgeo.models import FCN, get_weight
 from torchgeo.trainers import utils, BaseTask
+from torchgeo.models import ResNet18_Weights, ResNet50_Weights, ViTSmall16_Weights
 
 # so that we can use the pretrained models from this repo
 sys.path.append('../global-canopy-height-model')
@@ -304,7 +305,7 @@ class RegressionTask(BaseTask):
         else:
             y_hat = y_hat_
             y = y_
-
+        
         loss = self.criterion(y_hat, y)
         self.log("val_loss", loss)
         self.val_metrics(y_hat, y)
@@ -321,38 +322,36 @@ class RegressionTask(BaseTask):
             and hasattr(self.logger, "experiment")
             and hasattr(self.logger.experiment, "add_figure")
         ):
-            try:                 
-                datamodule = self.trainer.datamodule
-                if self.target_key == "mask":
-                    y_ = y_.squeeze(dim=1)
-                    y_hat_ = y_hat_.squeeze(dim=1)
-                batch["prediction"] = y_hat_
-                keys = ["image", self.target_key, "prediction"]
-                for key in keys:
-                    batch[key] = batch[key].cpu()
-                for i in range(4):
-                    sample = unbind_samples(batch)[i]
-                    if (sample[self.target_key] >= 0).any():
-                        fig = datamodule.plot(sample, pad=self.pad_pixels)
-                        summary_writer = self.logger.experiment
-                        summary_writer.add_figure(
-                            f"image/{batch_idx}-{i}", fig, global_step=self.global_step
-                        )
-                        plt.close()
-            except ValueError:
-                pass
+            datamodule = self.trainer.datamodule
+            if self.target_key == "mask":
+                y_ = y_.squeeze(dim=1)
+                y_hat_ = y_hat_.squeeze(dim=1)
+            batch["prediction"] = y_hat_
+            keys = ["image", self.target_key, "prediction"]
+            for key in keys:
+                batch[key] = batch[key].cpu()
+            for i in range(4):
+                sample = unbind_samples(batch)[i]
+                if (sample[self.target_key] >= 0).any():
+                    fig = datamodule.plot(sample, pad=self.pad_pixels)
+                    summary_writer = self.logger.experiment
+                    summary_writer.add_figure(
+                        f"image/{batch_idx}-{i}", fig, global_step=self.global_step
+                    )
+                    plt.close()
 
-    def on_validation_epoch_end(self):
-        means_across_batches = np.mean(np.array(self.val_metrics_by_batch), axis=0).tolist() # get the average of each metric across batches
-        self.val_metrics_by_batch = [] # reset for the next epoch
-        self.val_metrics_by_epoch += [means_across_batches] # save epoch results
 
-        with open(f'{self.logger.log_dir}/val_metrics.csv', 'w', newline='') as csvfile: # save all epoch results as CSV
-            writer = csv.writer(csvfile, delimiter=' ', quotechar='|', quoting=csv.QUOTE_MINIMAL)
-            writer.writerow(['val_MAE', 'val_MSE', 'val_RMSE', 'val_loss'])
+#     def on_validation_epoch_end(self):
+#         means_across_batches = np.mean(np.array(self.val_metrics_by_batch), axis=0).tolist() # get the average of each metric across batches
+#         self.val_metrics_by_batch = [] # reset for the next epoch
+#         self.val_metrics_by_epoch += [means_across_batches] # save epoch results
+
+#         with open(f'{self.logger.log_dir}/val_metrics.csv', 'w', newline='') as csvfile: # save all epoch results as CSV
+#             writer = csv.writer(csvfile, delimiter=' ', quotechar='|', quoting=csv.QUOTE_MINIMAL)
+#             writer.writerow(['val_MAE', 'val_MSE', 'val_RMSE', 'val_loss'])
             
-            for row in range(len(self.val_metrics_by_epoch)):
-                writer.writerow(self.val_metrics_by_epoch[row])
+#             for row in range(len(self.val_metrics_by_epoch)):
+#                 writer.writerow(self.val_metrics_by_epoch[row])
 
     def test_step(self, batch: Any, batch_idx: int, dataloader_idx: int = 0) -> None:
         """Compute the test loss and additional metrics.
@@ -422,10 +421,27 @@ class PixelwiseRegressionTask(RegressionTask):
         if self.hparams["model"] == "unet":
             self.model = smp.Unet(
                 encoder_name=self.hparams["backbone"],
-                encoder_weights="imagenet" if weights is True else None,
                 in_channels=self.hparams["in_channels"],
                 classes=1,
             )
+            if weights is not None:
+                print(f'loading encoder weights from {weights}')
+                
+                # which backbone
+                if self.hparams["backbone"] == "resnet18":
+                    pretrained_weights = "ResNet18_Weights"
+                elif self.hparams["backbone"] == "resnet50":
+                    pretrained_weights = "ResNet50_Weights"
+
+                # which weights
+                if weights == 'SENTINEL2_ALL_MOCO':
+                    pretrained_weights += ".SENTINEL2_ALL_MOCO"
+                elif weights == 'SENTINEL2_RGB_MOCO':
+                    pretrained_weights += ".SENTINEL2_RGB_MOCO"
+                
+#                 self.model.encoder.load_state_dict(encoder_weights.get_state_dict(progress=True), strict=False)
+                weights = pretrained_weights
+            
         elif self.hparams["model"] == "deeplabv3+":
             self.model = smp.DeepLabV3Plus(
                 encoder_name=self.hparams["backbone"],
@@ -448,7 +464,7 @@ class PixelwiseRegressionTask(RegressionTask):
         else:
             raise ValueError(
                 f"Model type '{self.hparams['model']}' is not valid. "
-                "Currently, only supports 'unet', 'deeplabv3+' and 'fcn'."
+                "Currently, only supports 'unet', 'deeplabv3+', 'xceptionS2_08blocks_256', and 'fcn'."
             )
 
         if self.hparams["model"] not in ["fcn", "xceptionS2_08blocks_256"]:
@@ -462,7 +478,7 @@ class PixelwiseRegressionTask(RegressionTask):
                 self.model.encoder.load_state_dict(state_dict)
 
         # Freeze backbone
-        if self.hparams.get("freeze_backbone", False) and self.hparams["model"] in [
+        if self.hparams["freeze_backbone"] and self.hparams["model"] in [
             "unet",
             "deeplabv3+",
         ]:
@@ -495,7 +511,7 @@ class PixelwiseRegressionTask(RegressionTask):
                 
 
         # Freeze decoder
-        if self.hparams.get("freeze_decoder", False) and self.hparams["model"] in [
+        if self.hparams["freeze_decoder"] and self.hparams["model"] in [
             "unet",
             "deeplabv3+",
         ]:
