@@ -35,6 +35,10 @@ rgbnir_codes = ['B04', 'B03','B02', 'B08']
 sentinel_layer_means_4_channel = [S2_stats_by_channel[channel]['mean'] for channel in rgbnir_codes]
 sentinel_layer_stds_4_channel = [S2_stats_by_channel[channel]['std'] for channel in rgbnir_codes]
 
+rgb_codes = ['B04', 'B03','B02']
+sentinel_layer_means_3_channel = [S2_stats_by_channel[channel]['mean'] for channel in rgb_codes]
+sentinel_layer_stds_3_channel = [S2_stats_by_channel[channel]['std'] for channel in rgb_codes]
+
 s2_12_channel_codes = ['B01', 'B02', 'B03', 'B04', 'B05', 'B06', 'B07', 'B08', 'B8A', 'B09', 'B11', 'B12']
 # as per Lang et al.
 s2_12_channel_plus_latlon_codes = s2_12_channel_codes + ['lat', 'sin(lon)', 'cos(lon)']
@@ -43,7 +47,10 @@ sentinel_layer_means_12_channel_plus_latlon = [S2_stats_by_channel[channel]['mea
 sentinel_layer_stds_12_channel_plus_latlon = [S2_stats_by_channel[channel]['std'] for channel in s2_12_channel_plus_latlon_codes]
 
 def get_default_layers_and_transforms(num_image_channels):
-    if num_image_channels == 4:
+    if num_image_channels == 3:
+        data_layers = ['r', 'g', 'b', 'vis', 'chm']
+        batch_transforms = transforms_3_channel_rgbnir_plus_mask_imagestats
+    elif num_image_channels == 4:
         data_layers = ['r', 'g', 'b', 'nir', 'vis', 'chm']
         batch_transforms = transforms_4_channel_rgbnir_plus_mask_imagestats
     elif num_image_channels == 12:
@@ -155,6 +162,38 @@ def transforms_12_channel_plus_mask_imagestats(sample, img_nodata_val=-9999., ma
         stds = sentinel_layer_stds_12_channel_plus_latlon
     else:
         # NOTE: this won't make sense for the latlon values...
+        means = torch.Tensor([0. for x in range(len(sentinel_layer_means))])
+        stds = torch.Tensor([10000. for x in range(len(sentinel_layer_means))])
+    
+    for b in range(len(sample['image'])):
+        sample['image'][b] = (sample['image'][b].float() - means[b]) / stds[b]
+        
+    sample['image'][:,img_nodata_mask] = img_nodata_val
+    return sample
+
+def transforms_3_channel_rgbnir_plus_mask_imagestats(sample, img_nodata_val=-9999., mask_nodata_val=-9999., use_image_stats=True):
+    img_nodata_mask = (sample['image'][:3] == img_nodata_val).any(axis=0)
+    
+    # sixth band is the label, separate it 
+    label_band = 6
+    sample['mask'] = torch.Tensor(sample['image'][label_band:label_band+1]).clone()
+    
+    # make sure no imagery has nodata vals if mask has vals
+    img_nodata_mask = (sample['image'][:3] == img_nodata_val).any(axis=0)
+    mask_nodata_mask = (sample['mask'] == mask_nodata_val)[0]#.any(axis=0)
+    if img_nodata_mask[~mask_nodata_mask].any(): print('NODATA VAL detected in imagery')
+        
+    # these three bands are the visual image, separate them
+    if len(sample['image']) > 4:
+        sample['vis'] = sample['image'][3:6].clone()    
+        
+    # bands 0-3 are the image
+    sample['image'] = sample['image'][:3].clone() 
+
+    if use_image_stats:
+        means = sentinel_layer_means_3_channel
+        stds = sentinel_layer_stds_3_channel
+    else:
         means = torch.Tensor([0. for x in range(len(sentinel_layer_means))])
         stds = torch.Tensor([10000. for x in range(len(sentinel_layer_means))])
     
