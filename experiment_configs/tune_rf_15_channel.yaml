@@ -19,6 +19,7 @@ data:
 task:
   model: 'random_forest'
   criterion: 'squared_error'
+  n_jobs: 12
   in_channels: 15
   random_seed: 0
     
