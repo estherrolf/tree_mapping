@@ -27,20 +27,42 @@ def compare_tiffs(tiff_1_path, tiff_2_path):
 
     return (tiff_1_array == tiff_2_array).all()
 
-def check_percentage_data_in_range(resolution):
-    '''check what % of the 10m data is outside the 0-30 m height range'''
-    lidar_dir = f'{get_project_dir()}/data/int/lidar/lidar_by_site_32736_10m'
-    sites = os.listdir(lidar_dir)
+def check_percentage_data_in_range():
+    '''Checks what % of the 1m data is inside the 0-30 m height range'''
+
+    lidar_dir = f'{get_project_dir()}/data/raw/lidar_by_site_32736_merged'
+    tiffs = os.listdir(lidar_dir)
     num_points_in_range = 0
-    total_points = 0
+    num_non_NaN_points = 0
+
+    for tiff in tiffs:
+        with rasterio.open(f'{lidar_dir}/{tiff}') as file:
+            site_labels = file.read().ravel()
+            num_points_in_range += len(site_labels[(site_labels >= 0) & (site_labels <= 30)])
+            num_non_NaN_points += len(site_labels[site_labels != -9999.0])
+
+    print(f'Percentage of points in range = {100*num_points_in_range/num_non_NaN_points}%')
+
+def global_data_lidar_NaN_comparison(map, resolution):
+    '''Checks what % of the non-NaN LiDAR pixels are NaNs in the global maps'''
+
+    lidar_dir = f'{get_project_dir()}/data/int/lidar/lidar_by_site_32736_{resolution}m'
+    global_map_dir = f'{get_project_dir()}/data/existing_reference_data/{map}_maps_per_site_{resolution}m'
+    sites = os.listdir(lidar_dir)
+    num_NaN_preds_for_non_NaN_labels = 0
+    num_non_NaN_labels = 0
 
     for site in sites:
-        with rasterio.open(f'{lidar_dir}/{site}/{site}_CHM_10m.tif') as file:
-            site_labels = file.read().ravel()
-            num_points_in_range += len(np.where((site_labels >= 0) & (site_labels <= 30))[0])
-            total_points += len(np.where(site_labels != -9999)[0])
+        with rasterio.open(f'{lidar_dir}/{site}/{site}_CHM_{resolution}m.tif') as lidar_file:
+            site_labels = lidar_file.read().ravel()
+        
+        with rasterio.open(f'{global_map_dir}/{map.upper()}_MAP_{site}_{resolution}m.tif') as preds_file:
+            site_predictions = preds_file.read().ravel()
 
-    print(f'Percentage of points in range = {100*num_points_in_range/total_points}')
+        num_NaN_preds_for_non_NaN_labels += len([i for i in range(len(site_labels)) if site_labels[i] != -9999.0 and site_predictions[i] == -9999.0])
+        num_non_NaN_labels += len(site_labels[site_labels != -9999.0])
+
+    print(f'Percentage of non-NaN labels that have NaN predictions for {map} at {resolution}m-resolution = {100*num_NaN_preds_for_non_NaN_labels/num_non_NaN_labels}%')
 
 def plot_distance_to_feature(feature, resolution):
     lidar_dir = f'{get_project_dir()}/data/int/lidar/lidar_by_site_32736_{resolution}m'
@@ -163,47 +185,6 @@ def get_max_height_near_river():
     print(max(all_values_near_river), len(np.argwhere(np.array(all_values_near_river) > 30)))
 
 if __name__ == '__main__':
-    # plot_distance_to_feature(feature='river', resolution=10)
-    # get_CHM_values(resolution=30)
-    # plot_distance_to_feature(feature='river', resolution=30)
-    # histogram(resolution=30)
-    # plot_tiff('../../../tambe_lab/Users/luciagordon/tree_mapping/data/int/sentinel/sentinel_by_site_32736_10m/KaringaniSite01/T36KUU_20210513T073609_B01_10m.tif')
-    # plot_tiff('../../../tambe_lab/Users/luciagordon/rhino-midden-detector/firestorm-4/thermal.tif')
-    # get_max_height_near_river()
-    sites = os.listdir('../../../tambe_lab/Users/luciagordon/tree_mapping/data/int/lidar/lidar_by_site_32736_10m')
-    resolution = 10
-
-    for site in sites:
-        if site in sites:
-            print(site)
-
-            site_1m = rasterio.open(f'../../../tambe_lab/Users/luciagordon/tree_mapping/data/raw/lidar_by_site_32736/{site}_CHM_1m_merged.tif').read(1)
-            site_10m = rasterio.open(f'../../../tambe_lab/Users/luciagordon/tree_mapping/data/int/lidar/lidar_by_site_32736_10m/{site}/{site}_CHM_10m.tif').read(1)
-            site_30m = rasterio.open(f'../../../tambe_lab/Users/luciagordon/tree_mapping/data/int/lidar/lidar_by_site_32736_30m/{site}/{site}_CHM_30m.tif').read(1)
-
-            print(np.amin(site_1m[site_1m != -9999.0]))
-            print(np.amax(site_1m))
-            if np.amax(site_10m) > np.amax(site_1m): print('10m bigger')
-            if np.amax(site_30m) > np.amax(site_1m): print('30m bigger')
-            # print(np.amax(site_1m), np.amax(site_10m), np.amax(site_30m))
-
-            # warp = rasterio.open(f'../../../tambe_lab/Users/luciagordon/tree_mapping/data/int/lidar/lidar_by_site_32736_10m/{site}/{site}_CHM_10m.tif')
-            # print(warp.meta)
-            # warp_array = warp.read(1)
-            # ref_bounds = warp.bounds
-
-            # mine = rasterio.open(f'../../../tambe_lab/Users/luciagordon/tree_mapping/data/int/lidar/lidar_by_site_32736_10m_perc_mine/{site}/{site}_CHM_10m.tif')
-            # mine_pad = rasterio.open(f'../../../tambe_lab/Users/luciagordon/tree_mapping/data/int/lidar/lidar_by_site_32736_10m_perc_mine_pad/{site}/{site}_CHM_10m.tif')
-            # print((mine.read(1) == mine_pad.read(1)).all())
-            # print(mine.meta)
-            # window = rasterio.windows.from_bounds(ref_bounds.left, ref_bounds.bottom, ref_bounds.right, ref_bounds.top, mine.transform)
-            # mine_cropped_array = mine.read(indexes=1, window=window)
-            # print((warp_array == mine_cropped_array).all())
-            # counter = 0
-            # for i in range(warp_array.shape[0]):
-            #     for j in range(warp_array.shape[1]):
-            #         if warp_array[i][j] != mine_cropped_array[i][j]:
-            #             print(i, j, warp_array[i][j], mine_cropped_array[i][j])
-            #             counter += 1
-            # print(counter)
-            # print(warp_array.shape, mine_cropped_array.shape)
+    for resolution in [10,30]:
+        global_data_lidar_NaN_comparison(map='eth', resolution=resolution)
+        global_data_lidar_NaN_comparison(map='glad', resolution=resolution)
