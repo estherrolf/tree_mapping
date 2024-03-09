@@ -18,12 +18,14 @@ def train_rf(x_train,
              n_estimators,
              max_depth,
              model_random_seed,
+             n_jobs=None,
              return_model=False):
     
     model = RandomForestRegressor(n_estimators = n_estimators,
                               criterion = criterion, 
                               max_depth = max_depth,
                               random_state= model_random_seed,
+                                  n_jobs=n_jobs
                              )
     t1 = time.time()
     model.fit(x_train, y_train)
@@ -83,6 +85,7 @@ if __name__ == "__main__":
                            'max_depth': max_depth, 
                            'n_estimators': n_estimators,
                            'criterion': cfg['task']['criterion'],
+                           'n_jobs': cfg['task']['n_jobs'],
                           }
                 row.update(hparams)
                 
