@@ -2,9 +2,9 @@
 seed_training: 100
 splits_to_do:
   - 0
-  # - 1
-  # - 2 
-  # - 3
+  - 1
+  - 2 
+  - 3
 base_name: 'experiment_results'
 exp_name: 'local_only_models'
 version_id_base: '128_filters'
@@ -29,7 +29,7 @@ task:
     
 trainer:
   min_epochs: 1
-  max_epochs: 200
+  max_epochs: 100
   accelerator: 'gpu'
   devices:
     - 0
