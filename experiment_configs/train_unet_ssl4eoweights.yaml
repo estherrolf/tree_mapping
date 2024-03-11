@@ -7,7 +7,7 @@ splits_to_do:
   # - 3
 base_name: 'experiment_results'
 exp_name: 'test_unet'
-version_id_base: 'unet_resnset18_pretrained'
+version_id_base: 'unet_resnset18_pretrained_freeze_backbone'
 data:
   split_seed: 10
   num_image_channels: 13
@@ -21,6 +21,7 @@ task:
   model: 'unet'
   backbone: 'resnet18'
   weights: 'SENTINEL2_ALL_MOCO'
+  freeze_backbone: True
   loss: 'mse'
   in_channels: 13
   lr: 0.001

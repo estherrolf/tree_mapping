@@ -331,14 +331,16 @@ class RegressionTask(BaseTask):
             for key in keys:
                 batch[key] = batch[key].cpu()
             for i in range(4):
-                sample = unbind_samples(batch)[i]
-                if (sample[self.target_key] >= 0).any():
-                    fig = datamodule.plot(sample, pad=self.pad_pixels)
-                    summary_writer = self.logger.experiment
-                    summary_writer.add_figure(
-                        f"image/{batch_idx}-{i}", fig, global_step=self.global_step
-                    )
-                    plt.close()
+                samples_this_batch = unbind_samples(batch)
+                if i < len(samples_this_batch):
+                    sample = samples_this_batch[i]                    
+                    if (sample[self.target_key] >= 0).any():
+                        fig = datamodule.plot(sample, pad=self.pad_pixels)
+                        summary_writer = self.logger.experiment
+                        summary_writer.add_figure(
+                            f"image/{batch_idx}-{i}", fig, global_step=self.global_step
+                        )
+                        plt.close()
 
     def on_validation_epoch_end(self):
         means_across_batches = np.mean(np.array(self.val_metrics_by_batch), axis=0).tolist() # get the average of each metric across batches
