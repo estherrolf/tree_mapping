@@ -340,18 +340,17 @@ class RegressionTask(BaseTask):
                     )
                     plt.close()
 
+    def on_validation_epoch_end(self):
+        means_across_batches = np.mean(np.array(self.val_metrics_by_batch), axis=0).tolist() # get the average of each metric across batches
+        self.val_metrics_by_batch = [] # reset for the next epoch
+        self.val_metrics_by_epoch += [means_across_batches] # save epoch results
 
-#     def on_validation_epoch_end(self):
-#         means_across_batches = np.mean(np.array(self.val_metrics_by_batch), axis=0).tolist() # get the average of each metric across batches
-#         self.val_metrics_by_batch = [] # reset for the next epoch
-#         self.val_metrics_by_epoch += [means_across_batches] # save epoch results
-
-#         with open(f'{self.logger.log_dir}/val_metrics.csv', 'w', newline='') as csvfile: # save all epoch results as CSV
-#             writer = csv.writer(csvfile, delimiter=' ', quotechar='|', quoting=csv.QUOTE_MINIMAL)
-#             writer.writerow(['val_MAE', 'val_MSE', 'val_RMSE', 'val_loss'])
+        with open(f'{self.logger.log_dir}/val_metrics.csv', 'w', newline='') as csvfile: # save all epoch results as CSV
+            writer = csv.writer(csvfile, delimiter=' ', quotechar='|', quoting=csv.QUOTE_MINIMAL)
+            writer.writerow(['val_MAE', 'val_MSE', 'val_RMSE', 'val_loss'])
             
-#             for row in range(len(self.val_metrics_by_epoch)):
-#                 writer.writerow(self.val_metrics_by_epoch[row])
+            for row in range(len(self.val_metrics_by_epoch)):
+                writer.writerow(self.val_metrics_by_epoch[row])
 
     def test_step(self, batch: Any, batch_idx: int, dataloader_idx: int = 0) -> None:
         """Compute the test loss and additional metrics.

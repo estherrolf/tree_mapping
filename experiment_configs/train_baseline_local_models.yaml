@@ -17,6 +17,7 @@ data:
     length: 10000
     num_workers: 12
     eval_pad: 5
+
 task:
   model: 'fcn'
   loss: 'mse'
@@ -26,7 +27,7 @@ task:
   weight_decay: 0.01
   nan_val_mask: -9999.
   pad_pixels: 5
-    
+
 trainer:
   min_epochs: 1
   max_epochs: 100
