@@ -266,6 +266,9 @@ class RegressionTask(BaseTask):
             y_hat = y_hat_
             y = y_
             
+        # if nothing in the batch is not nan:
+        if len(y) == 0: return
+            
         loss: Tensor = self.criterion(y_hat, y)
         self.log("train_loss", loss)
         self.train_metrics(y_hat, y)
@@ -387,6 +390,9 @@ class RegressionTask(BaseTask):
         else:
             y_hat = y_hat_
             y = y_
+            
+        # if nothing in the batch is not nan:
+        if len(y) == 0: return
             
         loss = self.criterion(y_hat, y)
         self.log("test_loss", loss)
