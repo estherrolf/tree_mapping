@@ -306,7 +306,11 @@ class RegressionTask(BaseTask):
             y_hat = y_hat_
             y = y_
         
-        loss = self.criterion(y_hat, y)
+        # if nothing in the batch is not nan:
+        if len(y) == 0: return
+    
+        loss = self.criterion(y_hat, y)    
+            
         self.log("val_loss", loss)
         self.val_metrics(y_hat, y)
         self.log_dict(self.val_metrics)
