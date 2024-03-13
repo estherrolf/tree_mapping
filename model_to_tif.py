@@ -22,7 +22,7 @@ sentinel_layer_codes = {'b': 'B02',
                         'nir':'B08',
                         'vis':'TCI'}
 
-def load_ckpt_weight_to_model(task_conditions_dict, checkpoint_dir):
+def load_ckpt_weights_to_model(task_conditions_dict, checkpoint_dir):
     lowest_val_ckpt_fp = get_lowest_val_checkpoint(checkpoint_dir)
     model = PixelwiseRegressionTask(**task_conditions_dict).model
 
@@ -48,7 +48,7 @@ def predict_site(site_id,
     '''
     
     # load the model for evaluation
-    model, lowest_val_ckpt_fp = load_ckpt_weight_to_model(task_conditions_dict, checkpoint_dir)
+    model, lowest_val_ckpt_fp = load_ckpt_weights_to_model(task_conditions_dict, checkpoint_dir)
     model = model.to(device).eval() 
 
     return predict_site_with_model(site_id,
@@ -158,7 +158,10 @@ def predict_site_with_model(site_id,
                 y2 = y1 + tile_size
                 if x1 < 0: x1 = 0
                 
-                output[x1:x2,y1:y2] = pred_tile[pad:-pad, pad:-pad]
+                if pad > 0:
+                    output[x1:x2,y1:y2] = pred_tile[pad:-pad, pad:-pad]
+                else:
+                    output[x1:x2,y1:y2] = pred_tile
                     
     #save the output
     if output_fp is not None:
