@@ -34,9 +34,9 @@ def read_config_file(config_yaml):
         cfg = yaml.safe_load(cfg_file)
     return cfg
 
-def train(datamodule, task, base_name, exp_name, version_id=None, **trainer_kwargs):
+def train(datamodule, task, base_name, exp_name, version_id_base, num_channels, split_number, version_id, **trainer_kwargs):
     # set up log dirs
-    exp_root_dir = f'{get_project_dir()}/{base_name}/{exp_name}'
+    exp_root_dir = f'{get_project_dir()}/{base_name}/{exp_name}/{version_id_base}/{num_channels}_channels/split_{split_number}'
     os.makedirs(f'{exp_root_dir}/logs', exist_ok=True)
     os.makedirs(f'{exp_root_dir}/models', exist_ok=True)
     
@@ -47,7 +47,7 @@ def train(datamodule, task, base_name, exp_name, version_id=None, **trainer_kwar
                                           save_last=True)
 
     logger = TensorBoardLogger(save_dir=exp_root_dir, name='logs', version=version_id)
-    print(f'Logs will go in {exp_root_dir}/logs')
+    print(f'Logs will go in {exp_root_dir}/logs/{version_id}')
 
     trainer = Trainer(callbacks=[checkpoint_callback],
                       fast_dev_run=False,
@@ -55,8 +55,8 @@ def train(datamodule, task, base_name, exp_name, version_id=None, **trainer_kwar
                       logger=logger,
                       num_sanity_val_steps=0,
                       **trainer_kwargs)
-    # print('task', task)
-    # print('datamodule', datamodule)
+    print('task', task)
+    print('datamodule', datamodule)
     trainer.fit(model=task, datamodule=datamodule)
     
 def run_experiment(config_fp, lr=None, weight_decay=None):
@@ -69,6 +69,7 @@ def run_experiment(config_fp, lr=None, weight_decay=None):
     base_name = cfg['base_name']
     exp_name = cfg['exp_name']
     version_id_base = cfg['version_id_base']
+    num_channels = cfg['task']['in_channels']
 
     for split_number in splits_to_do:
         task = cfg['task']
@@ -83,9 +84,8 @@ def run_experiment(config_fp, lr=None, weight_decay=None):
         sites_per_split = splits[split_number]
         chm = setup_chm_datamodule(sites_per_split, cfg['data'])
         chm_task = PixelwiseRegressionTask(**task)
-        version_id = f'{version_id_base}_split_{split_number}_seed_{split_seed}_lr_{task["lr"]}_wd_{task["weight_decay"]}_channels_{task["in_channels"]}'
-        print(version_id)
-        train(chm, chm_task, base_name, exp_name, version_id, **cfg['trainer'])
+        version_id = f'lr_{task["lr"]}_wd_{task["weight_decay"]}'
+        train(chm, chm_task, base_name, exp_name, version_id_base, num_channels, split_number, version_id, **cfg['trainer'])
     
 if __name__ == '__main__':
     torch.set_float32_matmul_precision('high')
