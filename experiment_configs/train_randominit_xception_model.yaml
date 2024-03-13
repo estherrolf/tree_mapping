@@ -2,18 +2,23 @@
 seed_training: 100
 splits_to_do:
   - 0
+  - 1
+  - 2
+  - 3
 base_name: 'experiment_results'
 exp_name: 'finetune_xceptionS2'
-version_id_base: 'xceptionS2_08blocks_256_randominit_train_last_two'
+version_id_base: 'xceptionS2_08blocks_256_randominit_train_last'
+
 data:
   split_seed: 10
   num_image_channels: 15
   datamodule:
     batch_size: 128
     patch_size: 64
-    length: 10000
+    length: 40000
     num_workers: 12
-    eval_pad: 5
+    eval_pad: 16
+
 task:
   loss: 'mse'
   model: 'xceptionS2_08blocks_256'
@@ -24,7 +29,7 @@ task:
   lr: 0.001
   weight_decay: 0.01
   nan_val_mask: -9999.
-  pad_pixels: 5
+  pad_pixels: 16
     
 trainer:
   min_epochs: 1
