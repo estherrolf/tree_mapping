@@ -17,7 +17,7 @@ data:
     patch_size: 64
     length: 40000
     num_workers: 12
-    eval_pad: 16
+    eval_pad: 7
 
 task:
   loss: 'mse'
@@ -28,7 +28,7 @@ task:
   lr: 0.001
   weight_decay: 0.01
   nan_val_mask: -9999.
-  pad_pixels: 16
+  pad_pixels: 7
     
 trainer:
   min_epochs: 1
