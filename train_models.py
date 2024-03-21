@@ -1,6 +1,6 @@
 # imports
 from datamodules.chm_datamodule import ChmDataModule, get_default_layers_and_transforms
-from experiment_utils import get_site_splits
+from experiment_utils import get_site_splits, read_config_file
 from lightning.pytorch.callbacks import EarlyStopping, ModelCheckpoint
 from lightning.pytorch.loggers import TensorBoardLogger
 from lightning.pytorch import Trainer
@@ -29,11 +29,6 @@ def setup_chm_datamodule(sites_per_split, cfg_data):
     
     return chm
 
-def read_config_file(config_yaml):
-    with open(config_yaml, "r") as cfg_file:
-        cfg = yaml.safe_load(cfg_file)
-    return cfg
-
 def train(datamodule, task, base_name, exp_name, version_id_base, num_channels, split_number, version_id, **trainer_kwargs):
     # set up log dirs
     exp_root_dir = f'{get_project_dir()}/{base_name}/{exp_name}/{version_id_base}/{num_channels}_channels/split_{split_number}'
@@ -59,7 +54,7 @@ def train(datamodule, task, base_name, exp_name, version_id_base, num_channels, 
     print('datamodule', datamodule)
     trainer.fit(model=task, datamodule=datamodule)
     
-def run_experiment(config_fp, lr=None, weight_decay=None):
+def run_experiment(config_fp, lr=None, weight_decay=None, channels=None):
     cfg = read_config_file(config_fp)
 
     # get this data split
@@ -69,7 +64,6 @@ def run_experiment(config_fp, lr=None, weight_decay=None):
     base_name = cfg['base_name']
     exp_name = cfg['exp_name']
     version_id_base = cfg['version_id_base']
-    num_channels = cfg['task']['in_channels']
 
     for split_number in splits_to_do:
         task = cfg['task']
@@ -79,18 +73,23 @@ def run_experiment(config_fp, lr=None, weight_decay=None):
             task['lr'] = lr
         if weight_decay is not None:
             task['weight_decay'] = weight_decay
+        if channels is not None:
+            task['in_channels'] = channels
+            cfg['data']['num_image_channels'] = channels
         
         # get the assignment for this split number
         sites_per_split = splits[split_number]
         chm = setup_chm_datamodule(sites_per_split, cfg['data'])
         chm_task = PixelwiseRegressionTask(**task)
         version_id = f'lr_{task["lr"]}_wd_{task["weight_decay"]}'
-        train(chm, chm_task, base_name, exp_name, version_id_base, num_channels, split_number, version_id, **cfg['trainer'])
+        train(chm, chm_task, base_name, exp_name, version_id_base, task['in_channels'], split_number, version_id, **cfg['trainer'])
     
 if __name__ == '__main__':
     torch.set_float32_matmul_precision('high')
     
     if len(sys.argv) == 2:
         run_experiment(config_fp=sys.argv[1])
-    else:
+    elif len(sys.argv) == 4:
         run_experiment(config_fp=sys.argv[1], lr=float(sys.argv[2]), weight_decay=float(sys.argv[3]))
+    elif len(sys.argv) == 5:
+        run_experiment(config_fp=sys.argv[1], lr=float(sys.argv[2]), weight_decay=float(sys.argv[3]), channels=int(sys.argv[4]))
