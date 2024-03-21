@@ -65,6 +65,7 @@ def global_data_lidar_NaN_comparison(map, resolution):
     print(f'Percentage of non-NaN labels that have NaN predictions for {map} at {resolution}m-resolution = {100*num_NaN_preds_for_non_NaN_labels/num_non_NaN_labels}%')
 
 def plot_distance_to_feature(feature, resolution):
+    '''Plots distance to feature and puts box around a site'''
     lidar_dir = f'{get_project_dir()}/data/int/lidar/lidar_by_site_32736_{resolution}m'
     sites = os.listdir(lidar_dir)
     site = sites[2]
@@ -73,7 +74,7 @@ def plot_distance_to_feature(feature, resolution):
     plt.figure(dpi=300)
     plt.imshow(array) # plot the array of pixel values as an image
     plt.axis('off') # remove axes        
-    plt.savefig(f'{site}_distance_to_{feature}_{resolution}m.png', bbox_inches='tight', pad_inches=0)
+    plt.savefig(f'figures/{feature}/{site}_distance_to_{feature}_{resolution}m.png', bbox_inches='tight', pad_inches=0)
     plt.close() # close the image to save memory
 
     feature_raster = rasterio.open(f'{get_project_dir()}/data/features/{feature}/{feature}_raster_{resolution}m.tif')
@@ -94,7 +95,7 @@ def plot_distance_to_feature(feature, resolution):
     plt.figure(dpi=300)
     plt.imshow(feature_array)
     plt.axis('off') # remove axes        
-    plt.savefig(f'{feature}_raster_{resolution}m_{site}_boxed.png', bbox_inches='tight', pad_inches=0)
+    plt.savefig(f'figures/{feature}/{feature}_raster_{resolution}m_{site}_boxed.png', bbox_inches='tight', pad_inches=0)
     plt.close() # close the image to save memory
 
 def get_max_distance_to_river():
