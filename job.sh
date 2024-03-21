@@ -13,4 +13,4 @@ set -x
 date
 source ~/.bashrc
 conda activate ~/../../tambe_lab/Users/luciagordon/tree-mapping/tree-mapping-env
-python train_models.py experiment_configs/${1} ${2} ${3}
+python train_models.py experiment_configs/${1} ${2} ${3} ${4}
