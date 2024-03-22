@@ -55,7 +55,8 @@ def rasterize(vector_path, resolution): # resolution = number of meters covered 
     plt.figure(dpi=300)
     plt.imshow(array) # plot the array of pixel values as an image
     plt.axis('off') # remove axes
-    plt.savefig(f'{feature}_raster_{resolution}m.png', bbox_inches='tight', pad_inches=0)
+    os.makedirs(f'figures/{feature}', exist_ok=True)
+    plt.savefig(f'figures/{feature}/{feature}_raster_{resolution}m.png', bbox_inches='tight', pad_inches=0)
     plt.close() # close the image to save memory
 
     print(f'Rasterized at {resolution}m resolution')

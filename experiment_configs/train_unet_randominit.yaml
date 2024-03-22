@@ -2,12 +2,13 @@
 seed_training: 100
 splits_to_do:
   - 0
-  # - 1
-  # - 2 
-  # - 3
+  - 1
+  - 2 
+  - 3
 base_name: 'experiment_results'
 exp_name: 'test_unet'
 version_id_base: 'unet_resnet18_randominit'
+
 data:
   split_seed: 10
   num_image_channels: 12
@@ -17,6 +18,7 @@ data:
     length: 10000
     num_workers: 12
     eval_pad: 0
+
 task:
   model: 'unet'
   backbone: 'resnet18'

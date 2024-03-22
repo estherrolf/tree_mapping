@@ -152,8 +152,9 @@ class RegressionTask(BaseTask):
         # new things:
         self.nan_val_mask = nan_val_mask
         self.pad_pixels = pad_pixels
-        self.val_metrics_by_epoch = []
-        self.val_metrics_by_batch = []
+        self.num_batch_points = []
+        self.val_loss_batches = []
+        self.val_loss_epochs = []
         
         super().__init__(ignore="weights")
 
@@ -311,16 +312,14 @@ class RegressionTask(BaseTask):
         
         # if nothing in the batch is not nan:
         if len(y) == 0: return
-    
-        loss = self.criterion(y_hat, y)    
-            
+
+        loss = self.criterion(y_hat, y)
+
         self.log("val_loss", loss)
         self.val_metrics(y_hat, y)
         self.log_dict(self.val_metrics)
-        val_metrics_dict = {key: value.cpu().item() for key, value in dict(self.val_metrics.compute().items()).items()} # dictionary with val_MAE, val_MSE, val_RMSE
-        val_metrics_dict['val_loss'] = loss.cpu().item() # add val_loss to dictionary
-        batch_val_metrics = list(val_metrics_dict.values()) # extract just the values
-        self.val_metrics_by_batch += [batch_val_metrics] # save batch within the epoch
+        self.num_batch_points += [len(y)]
+        self.val_loss_batches += [loss.cpu().item()]
 
         if (
             batch_idx < 10
@@ -349,18 +348,13 @@ class RegressionTask(BaseTask):
                         )
                         plt.close()
 
-
-#     def on_validation_epoch_end(self):
-#         means_across_batches = np.mean(np.array(self.val_metrics_by_batch), axis=0).tolist() # get the average of each metric across batches
-#         self.val_metrics_by_batch = [] # reset for the next epoch
-#         self.val_metrics_by_epoch += [means_across_batches] # save epoch results
-
-#         with open(f'{self.logger.log_dir}/val_metrics.csv', 'w', newline='') as csvfile: # save all epoch results as CSV
-#             writer = csv.writer(csvfile, delimiter=' ', quotechar='|', quoting=csv.QUOTE_MINIMAL)
-#             writer.writerow(['val_MAE', 'val_MSE', 'val_RMSE', 'val_loss'])
-            
-#             for row in range(len(self.val_metrics_by_epoch)):
-#                 writer.writerow(self.val_metrics_by_epoch[row])
+    def on_validation_epoch_end(self):
+        mean_loss_epoch = np.sum([self.num_batch_points[batch] * self.val_loss_batches[batch] for batch in range(len(self.num_batch_points))]) / np.sum(self.num_batch_points)
+        
+        self.val_loss_epochs += [mean_loss_epoch] # adds the current epoch's mean loss to the list of epoch losses
+        self.val_loss_batches = []
+        self.num_batch_points = [] 
+        np.save(f'{self.logger.log_dir}/val_loss', self.val_loss_epochs) # saves the list of val losses
 
     def test_step(self, batch: Any, batch_idx: int, dataloader_idx: int = 0) -> None:
         """Compute the test loss and additional metrics.
