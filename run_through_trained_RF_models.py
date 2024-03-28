@@ -24,20 +24,23 @@ def read_best_run_rf(run_row):
         'n_estimators': run_row['n_estimators'],
     }
             
-def predict_test_sites_with_rf(test_sites, model, cfg_data, save_name, save_dir='data/model_output'):
+def predict_test_sites_with_rf(test_sites, model, cfg_data, save_name, save_dir='model_output'):
     
     num_image_channels = cfg_data['num_image_channels']
     img_layers, transforms_pred_model = get_default_layers_and_transforms(num_image_channels)
+    
+    patch_size = cfg_data['datamodule']['patch_size']
+    pred_padding = cfg_data['datamodule']['eval_pad']
         
-    pred_args = {'patch_size': 64, 
-                 'padding': 5,
+    pred_args = {'patch_size': patch_size, 
+                 'padding': pred_padding,
                  'batch_size': 1,
                  'num_workers': 1,
-                 'stride': 54}
+                 'stride': patch_size - 2*pred_padding}
     
     for site_id in test_sites:
         print(site_id)
-        output_fp = os.path.join(save_dir, f'{save_name}/{site_id}_{save_name}.tif')
+        output_fp = os.path.join(save_dir, f'{save_name}/preds_{site_id}.tif')
         if not os.path.exists(os.path.join(save_dir)): os.mkdir(save_dir)
         if not os.path.exists(os.path.join(save_dir,save_name)): os.mkdir(os.path.join(save_dir,save_name))
         

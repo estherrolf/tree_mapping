@@ -27,7 +27,7 @@ def make_splits(num_sites, seed=0):
     
     return split_orders
 
-def get_site_splits(random_seed, data_dir=f'{get_project_dir()}/data'):
+def get_site_splits(random_seed, data_dir=f'data'):
     '''Gets sites for train, validation, and test set for four splits'''
 
     non_hidden_dirs = [x for x in os.listdir(os.path.join(data_dir,'int/lidar/lidar_by_site_32736_10m')) if not x.startswith('.')]
