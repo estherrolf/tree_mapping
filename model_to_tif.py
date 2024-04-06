@@ -127,7 +127,11 @@ def predict_site_with_model(site_id,
                     padder.weight = torch.nn.Parameter(torch.ones_like(padder.weight), requires_grad=False)
 
                     img_nodata_padded = padder(torch.Tensor(img_nodata_)).cpu().numpy()
-                    predictions[:,nodata_pad:-nodata_pad, nodata_pad:-nodata_pad][img_nodata_padded > 1 ] = nodata_value
+
+                    if nodata_pad > 0:
+                        predictions[:, nodata_pad:-nodata_pad, nodata_pad:-nodata_pad][img_nodata_padded > 1] = nodata_value
+                    else:
+                        predictions[img_nodata_padded > 1] = nodata_value
 
             for i in range(len(bboxes)):
                 bb = bboxes[i]
