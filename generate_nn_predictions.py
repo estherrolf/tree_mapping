@@ -47,8 +47,8 @@ def run_experiment_models_through_one_split(split_dir,
         print(test_site)
         output_fp = f'{output_dir}/preds_{test_site}.tif'
 
-        model, _ = load_ckpt_weights_to_model(task_conditions_dict=hparams,
-                                              checkpoint_dir=f'{split_dir}/models/{best_run}')
+        model, _ = load_ckpt_weights_to_model(task_conditions_dict=hparams, checkpoint_dir=f'{split_dir}/models/{best_run}')
+
         predict_site_with_model(site_id=test_site,
                                 model=model, 
                                 output_fp=output_fp,
@@ -74,4 +74,3 @@ if __name__ == '__main__':
                                                 best_run=best_run,
                                                 test_sites=test_sites,
                                                 output_dir=output_dir)
-        
