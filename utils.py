@@ -185,6 +185,13 @@ def get_max_height_near_river():
     
     print(max(all_values_near_river), len(np.argwhere(np.array(all_values_near_river) > 30)))
 
+def str_to_bool(string):
+    '''convert a string input to a Boolean variable'''
+    if string.lower() in ('yes', 'true', 't', 'y', '1'):
+        return True
+
+    return False
+
 if __name__ == '__main__':
     for resolution in [10,30]:
         global_data_lidar_NaN_comparison(map='eth', resolution=resolution)
