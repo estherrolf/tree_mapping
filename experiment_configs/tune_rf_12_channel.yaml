@@ -14,11 +14,12 @@ data:
     batch_size: 128
     patch_size: 64
     length: 10000
-    num_workers: 12
+    num_workers: 6
     eval_pad: 0
 task:
   model: 'random_forest'
   criterion: 'squared_error'
+  n_jobs: 6
   in_channels: 12
   random_seed: 0
     
