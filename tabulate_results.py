@@ -59,7 +59,7 @@ for reference_map in reference_maps:
     results_aggregated[reference_map] = compare_aligned_data(labels, preds)
 
     for i in range(num_height_intervals):
-        results_by_height[reference_map][f'{height_interval_bounds[i]}-{height_interval_bounds[i+1]}'] = compare_aligned_data(labels, preds, interval=[height_interval_bounds[i], height_interval_bounds[i+1]])['errors']
+        results_by_height[reference_map][f'{height_interval_bounds[i]}-{height_interval_bounds[i+1]}'] = compare_aligned_data(labels, preds, interval=[height_interval_bounds[i], height_interval_bounds[i+1]])
 
 for model in models:
     labels = []
@@ -87,7 +87,7 @@ for model in models:
     results_aggregated[model] = compare_aligned_data(labels, preds)
 
     for i in range(num_height_intervals):
-        results_by_height[model][f'{height_interval_bounds[i]}-{height_interval_bounds[i+1]}'] = compare_aligned_data(labels, preds, interval=[height_interval_bounds[i], height_interval_bounds[i+1]])['errors']
+        results_by_height[model][f'{height_interval_bounds[i]}-{height_interval_bounds[i+1]}'] = compare_aligned_data(labels, preds, interval=[height_interval_bounds[i], height_interval_bounds[i+1]])
 
 # save results as JSON
 results = {}
@@ -115,7 +115,10 @@ for setting in reference_maps + models:
                     results[setting][stratifier][site][metric] = float(results_by_site[setting][site][metric])
         elif stratifier == 'height':
             for interval in results_by_height[setting]:
-                results[setting][stratifier][interval] = {'errors': results_by_height[setting][interval].tolist()}
+                results[setting][stratifier][interval] = {}
+
+                for metric in ['min', 'q1', 'median', 'q3', 'max']:
+                    results[setting][stratifier][interval][metric] = float(results_by_height[setting][interval][metric])
 
 with open('results.json', 'w') as file:
     json.dump(results, file, indent=4)

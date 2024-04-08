@@ -82,11 +82,16 @@ def compare_aligned_data(labels,
     mse = sklearn.metrics.mean_squared_error(masked_labels, masked_preds) # mean squared error
     me = np.mean(masked_preds - masked_labels) # mean error
     errors = masked_preds - masked_labels # residuals
+    min_val = np.min(errors)
+    q1 = np.percentile(errors, 25)
+    median = np.median(errors)
+    q3 = np.percentile(errors, 75)
+    max_val = np.max(errors)
 
     if return_vals:
         return {'r2': r2, 'mae': mae, 'mse': mse, 'rmse': np.sqrt(mse), 'me': me, 'errors': errors, 'mask': mask, 'labels': labels, 'preds': preds}
     else:
-        return {'r2': r2, 'mae': mae, 'mse': mse, 'rmse': np.sqrt(mse), 'me': me, 'errors': errors}
+        return {'r2': r2, 'mae': mae, 'mse': mse, 'rmse': np.sqrt(mse), 'me': me, 'errors': errors, 'min': min_val, 'q1': q1, 'median': median, 'q3': q3, 'max': max_val}
 
 def plot_aligned_data(labels, preds, vis=None, title='title me!'):
     
