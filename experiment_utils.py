@@ -14,7 +14,7 @@ def make_splits(num_sites, seed=0):
     '''Splits site numbers into four groups, where each group appears in exactly one test set, one val set, and two train sets'''
 
     random_state = np.random.RandomState(seed) # creates a RandomState instance with a specific seed
-    random_order = random_state.choice(num_sites, num_sites, replace = False) # list of site numbers in random order
+    random_order = random_state.choice(num_sites, num_sites, replace=False) # list of site numbers in random order
     l1 = num_sites // 4
     l2 = num_sites // 2
     l3 = (num_sites * 3) // 4
@@ -27,7 +27,7 @@ def make_splits(num_sites, seed=0):
     
     return split_orders
 
-def get_site_splits(random_seed, data_dir=f'data'):
+def get_site_splits(random_seed, data_dir=f'{get_project_dir()}/data'):
     '''Gets sites for train, validation, and test set for four splits'''
 
     non_hidden_dirs = [x for x in os.listdir(os.path.join(data_dir,'int/lidar/lidar_by_site_32736_10m')) if not x.startswith('.')]

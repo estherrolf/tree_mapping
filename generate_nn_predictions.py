@@ -10,7 +10,7 @@ import sys
 
 project_dir = get_project_dir()
 
-def find_best_hp_run(setting_dir, split, criterion):
+def find_best_hp_run(setting_dir, split):
     combinations = os.listdir(f'{project_dir}/experiment_results/{setting_dir}/split_{split}/logs')
     results = []
 
@@ -60,17 +60,40 @@ def run_experiment_models_through_one_split(split_dir,
                                 nodata_pad=padding,
                                 device='cuda')
 
+def generate_nn_predictions(setting_dir, subsetted_train_sites=False):    
+    if not subsetted_train_sites:
+        output_dir = f'{project_dir}/model_output/{setting_dir}'
+        os.makedirs(output_dir, exist_ok=True)
+
+        for split in range(4):
+            print(f'Split {split}')
+
+            best_run = find_best_hp_run(setting_dir=setting_dir, split=split)
+            test_sites = get_site_splits(random_seed=10)[split]['test_sites']
+
+            run_experiment_models_through_one_split(split_dir=f'{project_dir}/experiment_results/{setting_dir}/split_{split}',
+                                                    best_run=best_run,
+                                                    test_sites=test_sites,
+                                                    output_dir=output_dir)
+    else:
+        for split in range(4):
+            print(f'Split {split}')
+
+            test_sites = get_site_splits(random_seed=10)[split]['test_sites']
+
+            for seed in range(10):
+                for train_site_count in [3, 6, 9, 12]:
+                    best_run = os.listdir(f'{project_dir}/experiment_results/{setting_dir}/{train_site_count}_train_sites/seed_{seed}/split_{split}/models')[0]
+
+                    output_dir = f'{project_dir}/model_output/{setting_dir}/{train_site_count}_train_sites/seed_{seed}'
+                    os.makedirs(output_dir, exist_ok=True)
+
+                    run_experiment_models_through_one_split(split_dir=f'{project_dir}/experiment_results/{setting_dir}/{train_site_count}_train_sites/seed_{seed}/split_{split}',
+                                                            best_run=best_run,
+                                                            test_sites=test_sites,
+                                                            output_dir=output_dir)
+
+
 if __name__ == '__main__':
     setting_dir = sys.argv[1] # e.g., "local_only_models/128_filters/3_channels"
-    output_dir = f'{project_dir}/model_output/{setting_dir}'
-    os.makedirs(output_dir, exist_ok=True)
-    
-    for split in range(4):
-        print(f'Split {split}')
-        best_run = find_best_hp_run(setting_dir=setting_dir, split=split, criterion='val_loss')
-        test_sites = get_site_splits(random_seed=10)[split]['test_sites']
-
-        run_experiment_models_through_one_split(split_dir=f'{project_dir}/experiment_results/{setting_dir}/split_{split}',
-                                                best_run=best_run,
-                                                test_sites=test_sites,
-                                                output_dir=output_dir)
+    generate_nn_predictions(setting_dir=setting_dir, subsetted_train_sites=True)
