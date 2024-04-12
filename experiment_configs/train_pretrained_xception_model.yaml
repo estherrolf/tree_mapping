@@ -5,7 +5,7 @@ splits_to_do:
   - 1
   - 2
   - 3
-base_name: 'experiment_results_test'
+base_name: 'experiment_results'
 exp_name: 'finetune_xceptionS2'
 version_id_base: 'pretrained'
 
