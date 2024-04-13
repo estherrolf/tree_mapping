@@ -25,6 +25,7 @@ models_xception = [f'finetune_xceptionS2/{x}/{y}' for y in ['1_layers_tuned', '2
 models_unet = ['unet/randominit/12_channels'] + [f'unet/pretrained/{x}' for x in ['freeze_backbone_True', 'freeze_backbone_False']]
 # models = models_rf + models_fcn + models_xception + models_unet
 models = models_fcn + models_xception + models_unet
+models_subset_training = ['local_only_models/128_filters/12_channels']
 
 # aggregate predictions and calculate performance metrics
 results_aggregated = {x: {} for x in reference_maps + models}
@@ -120,5 +121,82 @@ for setting in reference_maps + models:
                 for metric in ['min', 'q1', 'median', 'q3', 'max']:
                     results[setting][stratifier][interval][metric] = float(results_by_height[setting][interval][metric])
 
+# train on subset of train sites
+results_train_subset = {}
+
+for model in models_subset_training:
+    results_train_subset[model] = {}
+
+    for n_train_sites in [3,6,9,12]:
+        results_train_subset[model][n_train_sites] = {}
+
+        for seed in range(10):
+            results_train_subset[model][n_train_sites][seed] = {'total': {}, 'split': {}, 'site': {}}
+
+            results_aggregated = []
+            results_by_split = {}
+            results_by_site = {}
+            labels = []
+            preds = []
+            model_output_dir = f'{outputs_dir}/subsetted_train_sites/{model}/{n_train_sites}_train_sites/seed_{seed}'
+            
+            for split_number in range(4):
+                labels_by_split = []
+                preds_by_split = []
+                test_sites = get_site_splits(split_seed)[split_number]['test_sites']
+                
+                for site in test_sites:
+                    with rasterio.open(f'{lidar_coarsened_dir}/{site}/{site}_CHM_{resolution}m.tif') as file: # opens label tiff
+                        site_labels = file.read().ravel()
+                        labels = np.append(labels, site_labels)
+                        labels_by_split = np.append(labels_by_split, site_labels)
+
+                    with rasterio.open(f'{model_output_dir}/preds_{site}.tif') as file: # opens prediction tiff
+                        site_preds = file.read()[:, pred_padding:-pred_padding, pred_padding:-pred_padding].ravel()
+                        preds = np.append(preds, site_preds)
+                        preds_by_split = np.append(preds_by_split, site_preds)
+
+                    results_by_site[site] = compare_aligned_data(site_labels, site_preds)
+                results_by_split[split_number] = compare_aligned_data(labels_by_split, preds_by_split)
+            results_aggregated = compare_aligned_data(labels, preds)
+
+            results_train_subset[model][n_train_sites][seed]['total'] = results_aggregated
+            results_train_subset[model][n_train_sites][seed]['split'] = results_by_split
+            results_train_subset[model][n_train_sites][seed]['site'] = results_by_site
+
+# save results as JSON
+results_subset_train_dict = {}
+
+for setting in models_subset_training:
+    results_subset_train_dict[setting] = {}
+
+    for n_train_sites in [3, 6, 9, 12]:
+        results_subset_train_dict[setting][f'{n_train_sites} train sites'] = {}
+
+        for seed in range(10):
+            results_subset_train_dict[setting][f'{n_train_sites} train sites'][f'seed {seed}'] = {}
+
+            for stratifier in ['total', 'split', 'site']:
+                results_subset_train_dict[setting][f'{n_train_sites} train sites'][f'seed {seed}'][stratifier] = {}
+
+                if stratifier == 'total':
+                    for metric in ['r2', 'mae', 'mse', 'rmse']:
+                        results_subset_train_dict[setting][f'{n_train_sites} train sites'][f'seed {seed}'][stratifier][metric] = float(results_train_subset[setting][n_train_sites][seed]['total'][metric])
+                elif stratifier == 'split':
+                    for split in results_train_subset[setting][n_train_sites][seed]['split']:
+                        results_subset_train_dict[setting][f'{n_train_sites} train sites'][f'seed {seed}'][stratifier][split] = {}
+                        
+                        for metric in ['r2', 'mae', 'mse', 'rmse']:
+                            results_subset_train_dict[setting][f'{n_train_sites} train sites'][f'seed {seed}'][stratifier][split][metric] = float(results_train_subset[setting][n_train_sites][seed]['split'][split][metric])
+                elif stratifier == 'site':
+                    for site in results_train_subset[setting][n_train_sites][seed]['site']:
+                        results_subset_train_dict[setting][f'{n_train_sites} train sites'][f'seed {seed}'][stratifier][site] = {}
+                        
+                        for metric in ['r2', 'mae', 'mse', 'rmse']:
+                            results_subset_train_dict[setting][f'{n_train_sites} train sites'][f'seed {seed}'][stratifier][site][metric] = float(results_train_subset[setting][n_train_sites][seed]['site'][site][metric])
+
 with open('results.json', 'w') as file:
     json.dump(results, file, indent=4)
+
+with open('results_subset_train.json', 'w') as file:
+    json.dump(results_subset_train_dict, file, indent=4)
