@@ -25,7 +25,7 @@ models_xception = [f'finetune_xceptionS2/{x}/{y}' for y in ['1_layers_tuned', '2
 models_unet = ['unet/randominit/12_channels'] + [f'unet/pretrained/{x}' for x in ['freeze_backbone_True', 'freeze_backbone_False']]
 # models = models_rf + models_fcn + models_xception + models_unet
 models = models_fcn + models_xception + models_unet
-models_subset_training = ['local_only_models/128_filters/12_channels']
+models_subset_training = ['local_only_models/128_filters/12_channels', 'unet/pretrained/freeze_backbone_False']
 
 # aggregate predictions and calculate performance metrics
 results_aggregated = {x: {} for x in reference_maps + models}
