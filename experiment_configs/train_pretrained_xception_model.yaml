@@ -36,4 +36,3 @@ trainer:
   accelerator: 'gpu'
   devices:
     - 0
-    - 1
