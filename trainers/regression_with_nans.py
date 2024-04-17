@@ -58,6 +58,7 @@ class BaseTask(LightningModule, ABC):
         Args:
             ignore: Arguments to skip when saving hyperparameters.
         """
+
         super().__init__()
         self.save_hyperparameters(ignore=ignore)
         self.configure_losses()
@@ -147,6 +148,7 @@ class RegressionTask(BaseTask):
            *learning_rate* and *learning_rate_schedule_patience* were renamed to
            *lr* and *patience*.
         """
+
         self.weights = weights
         
         # new things:
@@ -422,7 +424,6 @@ class PixelwiseRegressionTask(RegressionTask):
     def configure_models(self) -> None:
         """Initialize the model."""
         weights = self.weights
-        # print('hyperparameters:', self.hparams)
 
         if self.hparams["model"] == "unet":
             self.model = smp.Unet(

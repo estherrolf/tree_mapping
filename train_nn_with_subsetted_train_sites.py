@@ -13,7 +13,8 @@ import yaml
 project_dir = get_project_dir()
 split_seed = 10
 n_trials = 10
-train_site_counts = [3, 6, 9, 12]
+# train_site_counts = [3, 6, 9, 12]
+train_site_counts = [12]
 config_name = sys.argv[1]
 config_file = read_config_file(config_yaml=f'experiment_configs/{config_name}')
 variable = sys.argv[2] # channels, layers_tuned, or freeze_backbone

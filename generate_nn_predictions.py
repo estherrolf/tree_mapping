@@ -82,9 +82,9 @@ def generate_nn_predictions(setting_dir, subsetted_train_sites=False):
             test_sites = get_site_splits(random_seed=10)[split]['test_sites']
 
             for seed in range(10):
-                for train_site_count in [3, 6, 9, 12]:
+                for train_site_count in [12]:
+                # for train_site_count in [3, 6, 9, 12]:
                     best_run = os.listdir(f'{project_dir}/experiment_results/{setting_dir}/{train_site_count}_train_sites/seed_{seed}/split_{split}/models')[0] # only one hp combo since we already picked the best one
-
                     output_dir = f'{project_dir}/model_output/{setting_dir}/{train_site_count}_train_sites/seed_{seed}'
                     os.makedirs(output_dir, exist_ok=True)
 
@@ -95,4 +95,5 @@ def generate_nn_predictions(setting_dir, subsetted_train_sites=False):
 
 if __name__ == '__main__':
     setting_dir = sys.argv[1] # e.g., "local_only_models/128_filters/3_channels"
-    generate_nn_predictions(setting_dir=setting_dir, subsetted_train_sites=True)
+    subsetted_train_sites = True if 'subset' in setting_dir else False
+    generate_nn_predictions(setting_dir=setting_dir, subsetted_train_sites=subsetted_train_sites)
