@@ -13,7 +13,11 @@ resolution = 10
 split_seed = 10
 pred_padding = 40 # defined by how we cropped the satellite imagery to the Karingani sites
 height_interval_bounds = [0, 3, 6, 10, 30]
+river_interval_bounds = [0, 100, 300, 600, 1000, 2000, 3000]
+geologies = ['Igneous', 'Unconsolidated', 'Sedimentary', 'Dambo colluvium', 'Undifferentiated']
 num_height_intervals = len(height_interval_bounds) - 1
+num_river_intervals = len(river_interval_bounds) - 1
+num_geologies = len(geologies)
 lidar_coarsened_dir = f'{project_dir}/data/int/lidar/lidar_by_site_32736_{resolution}m'
 sites = sorted([x for x in os.listdir(lidar_coarsened_dir) if not x.startswith('.')])
 reference_maps = ['ETH', 'GLAD']
@@ -32,6 +36,7 @@ results_aggregated = {x: {} for x in reference_maps + models}
 results_by_split = {x: {} for x in reference_maps + models}
 results_by_site = {x: {} for x in reference_maps + models}
 results_by_height = {x: {} for x in reference_maps + models}
+results_by_river = {x: {} for x in reference_maps + models}
 
 # get results
 for reference_map in reference_maps:
@@ -55,12 +60,12 @@ for reference_map in reference_maps:
                 preds = np.append(preds, site_preds)
                 preds_by_split = np.append(preds_by_split, site_preds)
 
-            results_by_site[reference_map][site] = compare_aligned_data(site_labels, site_preds)
-        results_by_split[reference_map][split_number] = compare_aligned_data(labels_by_split, preds_by_split)
-    results_aggregated[reference_map] = compare_aligned_data(labels, preds)
+            results_by_site[reference_map][site] = compare_aligned_data(site_labels, site_preds, reference_map=True)
+        results_by_split[reference_map][split_number] = compare_aligned_data(labels_by_split, preds_by_split, reference_map=True)
+    results_aggregated[reference_map] = compare_aligned_data(labels, preds, reference_map=True)
 
     for i in range(num_height_intervals):
-        results_by_height[reference_map][f'{height_interval_bounds[i]}-{height_interval_bounds[i+1]}'] = compare_aligned_data(labels, preds, interval=[height_interval_bounds[i], height_interval_bounds[i+1]])
+        results_by_height[reference_map][f'{height_interval_bounds[i]}-{height_interval_bounds[i+1]}'] = compare_aligned_data(labels, preds, interval=[height_interval_bounds[i], height_interval_bounds[i+1]], reference_map=True)
 
 for model in models:
     labels = []
@@ -90,13 +95,103 @@ for model in models:
     for i in range(num_height_intervals):
         results_by_height[model][f'{height_interval_bounds[i]}-{height_interval_bounds[i+1]}'] = compare_aligned_data(labels, preds, interval=[height_interval_bounds[i], height_interval_bounds[i+1]])
 
+# river
+for reference_map in reference_maps:
+    reference_map_by_site_dir = f'{project_dir}/data/existing_reference_data/{reference_map.lower()}_maps_per_site_{resolution}m'
+    
+    for i in range(num_river_intervals):
+        labels = []
+        preds = []
+
+        for site in sites:
+            with rasterio.open(f'{lidar_coarsened_dir}/{site}/{site}_CHM_{resolution}m.tif') as file:
+                site_labels = file.read().ravel()
+
+            with rasterio.open(f'{reference_map_by_site_dir}/{reference_map}_MAP_{site}_{resolution}m.tif') as file:
+                site_preds = file.read().ravel()
+
+            site_river_distances = np.load(f'{project_dir}/data/features/river/distances_to_river_{resolution}m/{site}_distances_to_river_{resolution}m.npy').ravel()
+            mask = (site_river_distances >= river_interval_bounds[i]) & (site_river_distances <= river_interval_bounds[i+1])
+            assert len(site_labels) == len(mask)
+            labels = np.append(labels, site_labels[mask])
+            preds = np.append(preds, site_preds[mask])
+        
+        results_by_river[reference_map][f'{river_interval_bounds[i]}-{river_interval_bounds[i+1]}'] = compare_aligned_data(labels, preds, reference_map=True)
+
+for model in models:
+    model_output_dir = f'{outputs_dir}/{model}'
+    
+    for i in range(num_river_intervals):
+        labels = []
+        preds = []
+
+        for site in sites:
+            with rasterio.open(f'{lidar_coarsened_dir}/{site}/{site}_CHM_{resolution}m.tif') as file:
+                site_labels = file.read().ravel()
+
+            with rasterio.open(f'{model_output_dir}/preds_{site}.tif') as file: # opens prediction tiff
+                site_preds = file.read()[:, pred_padding:-pred_padding, pred_padding:-pred_padding].ravel()
+
+            site_river_distances = np.load(f'{project_dir}/data/features/river/distances_to_river_{resolution}m/{site}_distances_to_river_{resolution}m.npy').ravel()
+            mask = (site_river_distances >= river_interval_bounds[i]) & (site_river_distances <= river_interval_bounds[i+1])
+            assert len(site_labels) == len(mask)
+            labels = np.append(labels, site_labels[mask])
+            preds = np.append(preds, site_preds[mask])
+        
+        results_by_river[model][f'{river_interval_bounds[i]}-{river_interval_bounds[i+1]}'] = compare_aligned_data(labels, preds)
+
+# geology - IN PROGRESS
+for reference_map in reference_maps:
+    reference_map_by_site_dir = f'{project_dir}/data/existing_reference_data/{reference_map.lower()}_maps_per_site_{resolution}m'
+    
+    for i in range(num_geologies):
+        labels = []
+        preds = []
+
+        for site in sites:
+            with rasterio.open(f'{lidar_coarsened_dir}/{site}/{site}_CHM_{resolution}m.tif') as file:
+                site_labels = file.read().ravel()
+
+            with rasterio.open(f'{reference_map_by_site_dir}/{reference_map}_MAP_{site}_{resolution}m.tif') as file:
+                site_preds = file.read().ravel()
+
+            geology_array = np.load(f'{project_dir}/data/features/geology/geology_raster_{resolution}m/{site}_geology_raster_{resolution}m.npy').ravel()
+            mask = (geology_array >= geology_interval_bounds[i]) & (geology_array <= geology_interval_bounds[i+1])
+            assert len(site_labels) == len(mask)
+            labels = np.append(labels, site_labels[mask])
+            preds = np.append(preds, site_preds[mask])
+        
+        results_by_geology[reference_map][f'{geology_interval_bounds[i]}-{geology_interval_bounds[i+1]}'] = compare_aligned_data(labels, preds, reference_map=True)
+
+for model in models:
+    model_output_dir = f'{outputs_dir}/{model}'
+    
+    for i in range(num_geologies):
+        labels = []
+        preds = []
+
+        for site in sites:
+            with rasterio.open(f'{lidar_coarsened_dir}/{site}/{site}_CHM_{resolution}m.tif') as file:
+                site_labels = file.read().ravel()
+
+            with rasterio.open(f'{model_output_dir}/preds_{site}.tif') as file: # opens prediction tiff
+                site_preds = file.read()[:, pred_padding:-pred_padding, pred_padding:-pred_padding].ravel()
+
+            geology_array = np.load(f'{project_dir}/data/features/geology/geology_raster_{resolution}m/{site}_geology_raster_{resolution}m.npy').ravel()
+            mask = (geology_array >= geology_interval_bounds[i]) & (geology_array <= geology_interval_bounds[i+1])
+            assert len(site_labels) == len(mask)
+            labels = np.append(labels, site_labels[mask])
+            preds = np.append(preds, site_preds[mask])
+        
+        results_by_geology[model][f'{geology_interval_bounds[i]}-{geology_interval_bounds[i+1]}'] = compare_aligned_data(labels, preds)
+
 # save results as JSON
 results = {}
 
 for setting in reference_maps + models:
     results[setting] = {}
 
-    for stratifier in ['total', 'split', 'site', 'height']:
+    for stratifier in ['total', 'split', 'site', 'height', 'river']:
         results[setting][stratifier] = {}
 
         if stratifier == 'total':
@@ -118,8 +213,14 @@ for setting in reference_maps + models:
             for interval in results_by_height[setting]:
                 results[setting][stratifier][interval] = {}
 
-                for metric in ['min', 'q1', 'median', 'q3', 'max']:
+                for metric in ['perc_10', 'q1', 'median', 'q3', 'perc_90']:
                     results[setting][stratifier][interval][metric] = float(results_by_height[setting][interval][metric])
+        elif stratifier == 'river':
+            for interval in results_by_river[setting]:
+                results[setting][stratifier][interval] = {}
+
+                for metric in ['perc_10', 'q1', 'median', 'q3', 'perc_90']:
+                    results[setting][stratifier][interval][metric] = float(results_by_river[setting][interval][metric])
 
 # train on subset of train sites
 results_train_subset = {}
