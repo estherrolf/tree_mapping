@@ -70,28 +70,33 @@ def match_map_to_labels(eval_site_id,
 def compare_aligned_data(labels, 
                          preds, 
                          interval=[0, 30],
-                         nodata_value=-9999.0, 
+                         nodata_value=-9999.0,
+                         reference_map=False,
                          return_vals=False):
 
     mask = (labels != nodata_value) & (preds != nodata_value) & (labels >= interval[0]) & (labels <= interval[1]) # excludes pixels for which we have no labels or predictions or whose labels are out of range in the current analysis
     masked_labels = labels[mask]
     masked_preds = preds[mask]
 
+    if not reference_map:
+        masked_preds[masked_preds < 0] = 0 # set negative predicted values to 0
+        masked_preds[masked_preds > 30] = 30 # set predicted values over 30 to 30
+
     r2 = sklearn.metrics.r2_score(masked_labels, masked_preds) # r^2 score
     mae = sklearn.metrics.mean_absolute_error(masked_labels, masked_preds) # mean absolute error
     mse = sklearn.metrics.mean_squared_error(masked_labels, masked_preds) # mean squared error
     me = np.mean(masked_preds - masked_labels) # mean error
     errors = masked_preds - masked_labels # residuals
-    min_val = np.min(errors)
+    perc_10 = np.percentile(errors, 10)
     q1 = np.percentile(errors, 25)
     median = np.median(errors)
     q3 = np.percentile(errors, 75)
-    max_val = np.max(errors)
+    perc_90 = np.percentile(errors, 90)
 
     if return_vals:
         return {'r2': r2, 'mae': mae, 'mse': mse, 'rmse': np.sqrt(mse), 'me': me, 'errors': errors, 'mask': mask, 'labels': labels, 'preds': preds}
     else:
-        return {'r2': r2, 'mae': mae, 'mse': mse, 'rmse': np.sqrt(mse), 'me': me, 'errors': errors, 'min': min_val, 'q1': q1, 'median': median, 'q3': q3, 'max': max_val}
+        return {'r2': r2, 'mae': mae, 'mse': mse, 'rmse': np.sqrt(mse), 'me': me, 'errors': errors, 'perc_10': perc_10, 'q1': q1, 'median': median, 'q3': q3, 'perc_90': perc_90}
 
 def plot_aligned_data(labels, preds, vis=None, title='title me!'):
     
