@@ -9,23 +9,23 @@ import numpy as np
 project_dir = get_project_dir()
 resolution = 10
 width = 0.2
-small_gap = 0.5*width
-big_gap = 2*width
+small_gap = 0.5 * width
+big_gap = 2 * width
 fontsize = 18
-plt.rcParams['xtick.labelsize'] = fontsize  # Set x-tick label size
-plt.rcParams['ytick.labelsize'] = fontsize  # Set y-tick label size
-plt.rcParams['xtick.major.size'] = 10  # Length of major x-tick marks
-plt.rcParams['ytick.major.size'] = 10  # Length of major y-tick marks
+plt.rcParams['xtick.labelsize'] = fontsize
+plt.rcParams['ytick.labelsize'] = fontsize
+plt.rcParams['xtick.major.size'] = 10
+plt.rcParams['ytick.major.size'] = 10
 
-def stratify_by_feature(feature, interval_bounds, x_axis_label):
-    num_intervals = len(interval_bounds) - 1
+def stratify_by_feature(feature, categories, x_axis_label):
+    num_categories = len(categories)
     cmap = mpl.colormaps['hsv']
 
     with open('results.json', 'r') as results_json:
         results = json.load(results_json)
         settings = [setting for setting in results]
         colors = cmap(np.linspace(0, 1, len(settings))) # take colors at regular intervals spanning the colormap
-        fig, ax = plt.subplots(figsize=(num_intervals*(len(settings)*(width+small_gap)+big_gap), 0.5*(num_intervals*(len(settings)*(width+small_gap)+big_gap))),
+        fig, ax = plt.subplots(figsize=(num_categories*(len(settings)*(width+small_gap)+big_gap), 0.5*(num_categories*(len(settings)*(width+small_gap)+big_gap))),
                                dpi=300)
         i = 0
 
@@ -57,13 +57,12 @@ def stratify_by_feature(feature, interval_bounds, x_axis_label):
                 j += 1
             i += 1
 
-        tick_positions = [j*(len(settings)*(width+small_gap)+big_gap) - big_gap/2 for j in range(num_intervals+1)]
-        tick_positions += [np.mean([tick_positions[j], tick_positions[j+1]]) for j in range(num_intervals)]
+        tick_positions = [j*(len(settings)*(width+small_gap)+big_gap) - big_gap/2 for j in range(num_categories+1)]
+        tick_positions += [np.mean([tick_positions[j], tick_positions[j+1]]) for j in range(num_categories)]
         tick_positions = sorted(tick_positions)
-        ax.set_xticks(tick_positions, labels=['' if i % 2 == 0 else f'{interval_bounds[int(i/2)]}-{interval_bounds[int(i/2)+1]}' for i in range(2*len(interval_bounds)-1)])
+        ax.set_xticks(tick_positions, labels=['' if i % 2 == 0 else f'{categories[int(i/2)]}' for i in range(2*num_categories+1)])
         ax.set_xlabel(x_axis_label, fontsize=fontsize)
         ax.set_ylabel('Residuals (m)', fontsize=fontsize)
-        ax.set_title(f'Maps Stratified by {feature.capitalize()}', fontsize=fontsize)
         plt.legend(handles=[patches.Patch(color=colors[i], label=settings[i]) for i in range(len(settings))],
                    loc='upper center',
                    bbox_to_anchor=(0.5, -0.1),
@@ -78,5 +77,5 @@ def stratify_by_feature(feature, interval_bounds, x_axis_label):
         plt.close()
 
 if __name__ == '__main__':
-    stratify_by_feature(feature='height', interval_bounds=[0, 3, 6, 10, 30], x_axis_label='LiDAR-Derived Height (m)')
-    stratify_by_feature(feature='river', interval_bounds=[0, 100, 300, 600, 1000, 2000, 3000], x_axis_label='Distance to River (m)')
+    stratify_by_feature(feature='height', categories=['0-3', '3-6', '6-10', '10-30'], x_axis_label='LiDAR-Derived Height (m)')
+    stratify_by_feature(feature='river', categories=['0-100', '100-300', '300-600', '600-1000', '1000-2000', '2000-3000'], x_axis_label='Distance to River (m)')
