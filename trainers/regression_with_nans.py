@@ -200,7 +200,7 @@ class RegressionTask(BaseTask):
             in_chans=self.hparams["in_channels"],
             pretrained=weights is True,
         )
-        # self.model = nn.DataParallel(self.model)
+
         # Load weights
         print('weights')
         if weights and weights is not True:
