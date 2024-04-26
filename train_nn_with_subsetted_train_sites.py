@@ -13,12 +13,11 @@ import yaml
 project_dir = get_project_dir()
 split_seed = 10
 n_trials = 10
-# train_site_counts = [3, 6, 9, 12]
-train_site_counts = [12]
 config_name = sys.argv[1]
 config_file = read_config_file(config_yaml=f'experiment_configs/{config_name}')
 variable = sys.argv[2] # channels, layers_tuned, or freeze_backbone
 variable_value = sys.argv[3] # int or Bool
+train_site_counts = [3, 6, 9] if sys.argv[4] == 'subset_train' else [12]
 
 if variable != 'freeze_backbone':
     setting_dir = f"{config_file['exp_name']}/{config_file['version_id_base']}/{variable_value}_{variable}"
@@ -38,9 +37,5 @@ for split in range(4):
         for train_site_count in train_site_counts:
             print(f'{train_site_count} train sites')
 
-            random.seed(seed)
-            np.random.seed(seed)
-            torch.manual_seed(seed)
-
             # train model for this split's best hyperparameters
-            subprocess.run(f"sbatch job.sh {config_name} {best_run.split('_')[1]} {best_run.split('_')[3]} --{variable}={variable_value} --train_sites={train_site_count} --split={split} --seed={seed}", shell=True)
+            subprocess.run(f"sbatch train_predict_subsetted_train_sites.sh {config_name} {best_run.split('_')[1]} {best_run.split('_')[3]} --{variable}={variable_value} {train_site_count} {split} {seed} {setting_dir}", shell=True)
