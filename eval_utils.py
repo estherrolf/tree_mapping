@@ -84,7 +84,7 @@ def compare_aligned_data(labels,
     errors = masked_preds - masked_labels # residuals
 
     if return_vals:
-        return {'r2': r2, 'mae': mae, 'mse': mse, 'rmse': np.sqrt(mse), 'me': me, 'errors': errors, 'mask': mask, 'labels': labels, 'preds': preds}
+        return {'r2': r2, 'mae': mae, 'mse': mse, 'rmse': np.sqrt(mse), 'me': me, 'errors': errors, 'data_mask': mask, 'labels': labels, 'preds': preds}
     else:
         return {'r2': r2, 'mae': mae, 'mse': mse, 'rmse': np.sqrt(mse), 'me': me, 'errors': errors}
 
