@@ -6,8 +6,8 @@ splits_to_do:
   - 2 
   - 3
 base_name: 'experiment_results'
-exp_name: 'test_unet'
-version_id_base: 'unet_resnet18_randominit'
+exp_name: 'unet'
+version_id_base: 'randominit'
 
 data:
   split_seed: 10

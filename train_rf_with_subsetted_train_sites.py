@@ -130,7 +130,7 @@ if __name__ == '__main__':
         model_kwargs.update(best_hps)
         
         t1 = time.time()
-        for i in range(0,1):
+        for i in range(n_trials):
             for n_train_sites in num_train_sites:
                 print(n_train_sites, end = ' ')
                 

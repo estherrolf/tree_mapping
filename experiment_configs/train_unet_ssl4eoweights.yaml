@@ -6,8 +6,8 @@ splits_to_do:
   - 2 
   - 3
 base_name: 'experiment_results'
-exp_name: 'test_unet'
-version_id_base: 'unet_resnset18_pretrained_freeze_backbone'
+exp_name: 'unet'
+version_id_base: 'pretrained'
 
 data:
   split_seed: 10
@@ -36,4 +36,4 @@ trainer:
   max_epochs: 200
   accelerator: 'gpu'
   devices:
-    - 1
+    - 0

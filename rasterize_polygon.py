@@ -2,8 +2,10 @@
 from rasterio import features
 from utils import get_project_dir
 import geopandas as gpd
+import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
 import numpy as np
+import os
 import rasterio
 
 data_dir = f'{get_project_dir()}/data'
@@ -20,6 +22,7 @@ def rasterize(vector_path, resolution): # resolution = number of meters covered 
     width = int((bounds[2] - bounds[0]) / resolution)
     height = int((bounds[3] - bounds[1]) / resolution)
     transform = rasterio.transform.from_origin(bounds[0], bounds[3], resolution, resolution)
+    categories_to_numbers = {category: i+1 for i, category in enumerate(vector[feature.upper()].unique())}
 
     with rasterio.open(raster_path,
                        'w',
@@ -31,7 +34,7 @@ def rasterize(vector_path, resolution): # resolution = number of meters covered 
                        crs=vector.crs,
                        transform=transform) as dst:
 
-        burned = features.rasterize(((geometry, 255) for geometry in vector.geometry),
+        burned = features.rasterize(((geometry, value) for geometry, value in zip(vector.geometry, vector[feature.upper()].map(categories_to_numbers))),
                                      out_shape=(height, width),
                                      transform=transform,
                                      fill=0,
@@ -41,19 +44,17 @@ def rasterize(vector_path, resolution): # resolution = number of meters covered 
         dst.write_band(1, burned) # write the rasterized shapefile to the GeoTIFF
 
     # convert raster to array
-    array = rasterio.open(raster_path).read(1) # 0 = not river, 255 = river
+    array = rasterio.open(raster_path).read(1)
     print(f'Array shape = {array.shape}')
     print(f'Min array = {np.amin(array)}, max array = {np.amax(array)}')
 
-    # check that all values are 0 or 255
-    for row in range(array.shape[0]):
-        for col in range(array.shape[1]):
-            if array[row][col] != 0 and array[row][col] != 255:
-                print(array[row][col])
-
     # plot raster
+    categories_to_numbers = {'background': 0, **categories_to_numbers}
     plt.figure(dpi=300)
-    plt.imshow(array) # plot the array of pixel values as an image
+    cmap = plt.get_cmap('viridis', len(categories_to_numbers))
+    plt.imshow(array, cmap=cmap) # plot the array of pixel values as an image
+    patches = [mpatches.Patch(color=cmap(i), label=cat) for i, cat in enumerate(categories_to_numbers)]
+    plt.legend(handles=patches[1:], fontsize=6)
     plt.axis('off') # remove axes
     os.makedirs(f'figures/{feature}', exist_ok=True)
     plt.savefig(f'figures/{feature}/{feature}_raster_{resolution}m.png', bbox_inches='tight', pad_inches=0)
@@ -62,5 +63,5 @@ def rasterize(vector_path, resolution): # resolution = number of meters covered 
     print(f'Rasterized at {resolution}m resolution')
 
 if __name__ == '__main__':
-    rasterize(vector_path=f'{data_dir}/features/river/river_shapefile/river_shapefile.shp', resolution=10)
-    rasterize(vector_path=f'{data_dir}/features/river/river_shapefile/river_shapefile.shp', resolution=30)
+    rasterize(vector_path=f'{data_dir}/features/geology/geology_soil_vegetation_shapefile/geology_soil_vegetation_shapefile.shp', resolution=10)
+    rasterize(vector_path=f'{data_dir}/features/geology/geology_soil_vegetation_shapefile/geology_soil_vegetation_shapefile.shp', resolution=30)

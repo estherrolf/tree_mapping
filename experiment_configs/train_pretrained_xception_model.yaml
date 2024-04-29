@@ -7,7 +7,7 @@ splits_to_do:
   - 3
 base_name: 'experiment_results'
 exp_name: 'finetune_xceptionS2'
-version_id_base: 'xceptionS2_08blocks_256_pretrained_train_last'
+version_id_base: 'pretrained'
 
 data:
   split_seed: 10
@@ -15,14 +15,14 @@ data:
   datamodule:
     batch_size: 128
     patch_size: 64
-    length: 40000
+    length: 10000
     num_workers: 12
     eval_pad: 7
 
 task:
   loss: 'mse'
   model: 'xceptionS2_08blocks_256'
-  num_layers_to_unfreeze: 2
+  num_layers_to_unfreeze: 1
   weights: "GLOBAL_GEDI_MODEL_0"
   in_channels: 15
   lr: 0.001
@@ -32,7 +32,7 @@ task:
     
 trainer:
   min_epochs: 1
-  max_epochs: 500
+  max_epochs: 200
   accelerator: 'gpu'
   devices:
     - 0

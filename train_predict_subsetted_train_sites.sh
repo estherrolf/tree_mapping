@@ -13,7 +13,5 @@ set -x
 date
 source ~/.bashrc
 conda activate ~/../../tambe_lab/Users/luciagordon/tree-mapping/tree-mapping-env
-# python train_models.py --config_fp=experiment_configs/${1} --lr=${2} --weight_decay=${3} --channels=${4}
-# python train_models.py --config_fp=experiment_configs/${1} --lr=${2} --weight_decay=${3} --layers_tuned=${4}
-# python train_models.py --config_fp=experiment_configs/${1} --lr=${2} --weight_decay=${3} --freeze_backbone=${4}
-python train_models.py --config_fp=experiment_configs/${1} --lr=${2} --weight_decay=${3} ${4} ${5} ${6} ${7}
+python train_models.py --config_fp=experiment_configs/${1} --lr=${2} --weight_decay=${3} ${4} --train_site_count=${5} --split=${6} --seed=${7}
+python generate_nn_predictions.py --setting_dir=${8} --train_site_count=${5} --split=${6} --seed=${7}
