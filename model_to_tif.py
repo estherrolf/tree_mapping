@@ -73,7 +73,9 @@ def predict_site_with_model(site_id,
                             img_nodata_value = -9999.,
                             nodata_pad= 5,
                             model_is_random_forest=False,
-                            device='cuda'):
+                            device='cuda',
+                            min_clip=0,
+                            max_clip=30):
 
     if not model_is_random_forest:
         model = model.to(device).eval()                              
@@ -127,7 +129,11 @@ def predict_site_with_model(site_id,
                     padder.weight = torch.nn.Parameter(torch.ones_like(padder.weight), requires_grad=False)
 
                     img_nodata_padded = padder(torch.Tensor(img_nodata_)).cpu().numpy()
-                    predictions[:,nodata_pad:-nodata_pad, nodata_pad:-nodata_pad][img_nodata_padded > 1 ] = nodata_value
+
+                    if nodata_pad > 0:
+                        predictions[:, nodata_pad:-nodata_pad, nodata_pad:-nodata_pad][img_nodata_padded > 1] = nodata_value
+                    else:
+                        predictions[img_nodata_padded > 1] = nodata_value
 
             for i in range(len(bboxes)):
                 bb = bboxes[i]
@@ -162,7 +168,10 @@ def predict_site_with_model(site_id,
                     output[x1:x2,y1:y2] = pred_tile[pad:-pad, pad:-pad]
                 else:
                     output[x1:x2,y1:y2] = pred_tile
-                    
+
+    output[output < min_clip] = min_clip # set negative predicted values to 0
+    output[output > max_clip] = max_clip # set predicted values over 30 to 30
+            
     #save the output
     if output_fp is not None:
         profile_out = profile.copy()

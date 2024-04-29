@@ -7,6 +7,7 @@ from utils import get_project_dir
 import matplotlib.pyplot as plt
 import numpy as np
 import os
+import sys
 
 project_dir = get_project_dir()
 
@@ -23,9 +24,7 @@ def visualize_loss(exp_dir, epochs):
             print('wrong length')
         for combo in results[split]:
             if len(results[split][combo]) != epochs:
-                print('wrong shape')
-
-    colors = ['b', 'g', 'r', 'c', 'm', 'y', 'tab:blue', 'tab:orange', 'tab:green', 'tab:red', 'tab:purple', 'tab:brown', 'tab:pink', 'tab:gray', 'tab:olive', 'tab:cyan', 'rosybrown', 'lightcoral', 'bisque', 'darkorange', 'forestgreen', 'limegreen', 'slategrey', 'lightsteelblue']
+                print(f"{split} didn't get to all epochs")
 
     for split in results.keys():
         fig, ax = plt.subplots(dpi=300)
@@ -38,7 +37,7 @@ def visualize_loss(exp_dir, epochs):
             split_results += [combo_results]
             ax.plot(np.arange(1, len(combo_results)+1), combo_results, label=combo)
 
-        ax.set(ylim=(0,10))
+        ax.set(ylim=(0, 10))
         ax.set_title(title)
         ax.set_xlabel('Epoch')
         ax.set_ylabel('Validation Loss (m$^2$)')
@@ -51,7 +50,8 @@ def visualize_loss(exp_dir, epochs):
         print(f'Split {split.split("_")[1]} achieves the minimum loss of {round(np.min(split_results),5)} for {list(results[split].keys())[where_min[0]]} after epoch {where_min[1]}')
 
 if __name__ == '__main__':
-    exp_dir = f'{project_dir}/experiment_results/local_only_models/128_filters/3_channels'
-    epochs = 300
+    setting = sys.argv[1] # e.g., "local_only_models/128_filters/3_channels"
+    exp_dir = f'{project_dir}/experiment_results/{setting}'
+    epochs = 200
 
     visualize_loss(exp_dir, epochs)

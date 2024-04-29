@@ -7,7 +7,7 @@ splits_to_do:
   - 3
 base_name: 'experiment_results'
 exp_name: 'finetune_xceptionS2'
-version_id_base: 'xceptionS2_08blocks_256_randominit_train_last'
+version_id_base: 'randominit_latlon'
 
 data:
   split_seed: 10
@@ -15,7 +15,7 @@ data:
   datamodule:
     batch_size: 128
     patch_size: 64
-    length: 40000
+    length: 10000
     num_workers: 12
     eval_pad: 7
 

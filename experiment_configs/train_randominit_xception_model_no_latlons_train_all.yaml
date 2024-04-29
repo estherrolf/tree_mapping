@@ -15,7 +15,7 @@ data:
   datamodule:
     batch_size: 128
     patch_size: 64
-    length: 40000
+    length: 10000
     num_workers: 12
     eval_pad: 7
 
