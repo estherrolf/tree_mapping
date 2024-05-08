@@ -1,8 +1,10 @@
 # imports
 from osgeo import gdal
+import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
 import numpy as np
 import os
+import random
 import rasterio
 import yaml
 
@@ -98,8 +100,48 @@ def plot_distance_to_feature(feature, resolution):
     plt.savefig(f'figures/{feature}/{feature}_raster_{resolution}m_{site}_boxed.png', bbox_inches='tight', pad_inches=0)
     plt.close() # close the image to save memory
 
+def plot_feature_by_site(feature, resolution):
+    '''Plots distance to feature and puts box around a site'''
+    lidar_dir = f'{get_project_dir()}/data/int/lidar/lidar_by_site_32736_{resolution}m'
+    sites = os.listdir(lidar_dir)
+    site = sites[2]
+    array = np.load(f'{get_project_dir()}/data/features/{feature}/{feature}_{resolution}m/{site}_{feature}_{resolution}m.npy')
+    categories_to_numbers = {'background': 0, 'Igneous': 1, 'Unconsolidated': 2, 'Sedimentary': 3, 'Dambo colluvium': 4, 'Undifferentiated': 5}
+    plt.figure(dpi=300)
+    cmap = plt.get_cmap('viridis', len(categories_to_numbers))
+    norm = plt.Normalize(min(categories_to_numbers.values()), max(categories_to_numbers.values()))
+    plt.imshow(array, cmap=cmap, norm=norm) # plot the array of pixel values as an image
+    patches = [mpatches.Patch(color=cmap(i), label=cat) for i, cat in enumerate(categories_to_numbers)]
+    plt.legend(handles=patches[1:], fontsize=6)
+    plt.axis('off') # remove axes
+    plt.savefig(f'figures/{feature}/{site}_{feature}_{resolution}m.png', bbox_inches='tight', pad_inches=0)
+    plt.close() # close the image to save memory
+
+    feature_raster = rasterio.open(f'{get_project_dir()}/data/features/{feature}/{feature}_raster_{resolution}m.tif')
+    feature_left, feature_bottom, feature_right, feature_top = feature_raster.bounds
+    feature_array = feature_raster.read(1)
+
+    site_left, site_bottom, site_right, site_top = rasterio.open(f'{lidar_dir}/{site}/{site}_CHM_{resolution}m.tif').bounds # site bounds
+    site_top_in_feature_array = int((feature_top - site_top) / resolution)
+    site_bottom_in_feature_array = int(feature_array.shape[0] + (feature_bottom - site_bottom) / resolution)
+    site_left_in_feature_array = int((site_left - feature_left) / resolution)
+    site_right_in_feature_array = int(feature_array.shape[1] + (site_right - feature_right) / resolution)
+
+    for i in range(site_top_in_feature_array, site_bottom_in_feature_array+1):
+        for j in range(site_left_in_feature_array, site_right_in_feature_array+1):
+            if (i == site_top_in_feature_array or i == site_bottom_in_feature_array) or (j == site_left_in_feature_array or j == site_right_in_feature_array):
+                feature_array[i][j] = 0
+
+    plt.figure(dpi=300)
+    plt.imshow(feature_array)
+    patches = [mpatches.Patch(color=cmap(i), label=cat) for i, cat in enumerate(categories_to_numbers)]
+    plt.legend(handles=patches[1:], fontsize=6)
+    plt.axis('off') # remove axes        
+    plt.savefig(f'figures/{feature}/{feature}_raster_{resolution}m_{site}_boxed.png', bbox_inches='tight', pad_inches=0)
+    plt.close() # close the image to save memory
+
 def get_max_distance_to_river():
-    distances_to_river_dir = f'{get_project_dir()}/distances-to-river'
+    distances_to_river_dir = f'{get_project_dir()}/data/features/river/distances_to_river_10m'
     max_distances = []
 
     for array in os.listdir(distances_to_river_dir):
@@ -193,6 +235,16 @@ def str_to_bool(string):
     return False
 
 if __name__ == '__main__':
-    for resolution in [10,30]:
-        global_data_lidar_NaN_comparison(map='eth', resolution=resolution)
-        global_data_lidar_NaN_comparison(map='glad', resolution=resolution)
+    # for resolution in [10,30]:
+    #     global_data_lidar_NaN_comparison(map='eth', resolution=resolution)
+    #     global_data_lidar_NaN_comparison(map='glad', resolution=resolution)
+
+    # get_max_distance_to_river()
+    # plot_distance_to_feature(feature='river', resolution=10)
+    # plot_feature_by_site(feature='geology', resolution=10)
+
+    everyone_folder = '../../../tambe_lab/Everyone/data_mar8/raw/lidar_by_site_32736'
+    my_folder = '../../../tambe_lab/Users/luciagordon/tree_mapping/data/raw/lidar_by_site_32736'
+
+    for tiff in os.listdir(everyone_folder):
+        print(compare_tiffs(f'{everyone_folder}/{tiff}', f'{my_folder}/{tiff}'))
