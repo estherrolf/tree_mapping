@@ -90,7 +90,7 @@ def compare_aligned_data(labels,
     perc_90 = np.percentile(errors, 90)
 
     if return_vals:
-        return {'r2': r2, 'mae': mae, 'mse': mse, 'rmse': np.sqrt(mse), 'me': me, 'errors': errors, 'mask': mask, 'labels': labels, 'preds': preds}
+        return {'r2': r2, 'mae': mae, 'mse': mse, 'rmse': np.sqrt(mse), 'me': me, 'errors': errors, 'data_mask': mask, 'labels': labels, 'preds': preds}
     else:
         return {'r2': r2, 'mae': mae, 'mse': mse, 'rmse': np.sqrt(mse), 'me': me, 'errors': errors, 'perc_10': perc_10, 'q1': q1, 'median': median, 'q3': q3, 'perc_90': perc_90}
 

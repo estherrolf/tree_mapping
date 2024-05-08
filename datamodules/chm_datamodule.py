@@ -46,26 +46,29 @@ s2_12_channel_plus_latlon_codes = s2_12_channel_codes + ['lat', 'sin(lon)', 'cos
 sentinel_layer_means_12_channel_plus_latlon = [S2_stats_by_channel[channel]['mean'] for channel in s2_12_channel_plus_latlon_codes]
 sentinel_layer_stds_12_channel_plus_latlon = [S2_stats_by_channel[channel]['std'] for channel in s2_12_channel_plus_latlon_codes]
 
-def get_default_layers_and_transforms(num_image_channels):
+def get_default_layers_and_transforms(num_image_channels, predict_mode = False):
     if num_image_channels == 3:
         data_layers = ['r', 'g', 'b', 'vis', 'chm']
-        batch_transforms = transforms_3_channel_rgbnir_plus_mask_imagestats
+        batch_transforms = transforms_3_channel
     elif num_image_channels == 4:
         data_layers = ['r', 'g', 'b', 'nir', 'vis', 'chm']
-        batch_transforms = transforms_4_channel_rgbnir_plus_mask_imagestats
+        batch_transforms = transforms_4_channel
     elif num_image_channels == 12:
+        batch_transforms = transforms_12_channel
         data_layers = ['B01', 'B02', 'B03', 'B04', 'B05', 'B06', 'B07', 'B08', 'B8A', 'B09', 'B11', 'B12'] + ['vis', 'chm']
-        batch_transforms = transforms_12_channel_plus_mask_imagestats
     elif num_image_channels == 13:
         data_layers = ['B01', 'B02', 'B03', 'B04', 'B05', 'B06', 'B07', 'B08', 'B8A', 'B09', 'B11', 'B12'] + ['vis', 'chm']
-        batch_transforms = transforms_13_channel_plus_mask_imagestats
+        batch_transforms = transforms_13_channel
     elif num_image_channels == 15:
         data_layers = ['B01', 'B02', 'B03', 'B04', 'B05', 'B06', 'B07', 'B08', 'B8A', 'B09', 'B11', 'B12'] + ['vis', 'chm']
-        batch_transforms = transforms_12_channel_latllon_plus_mask_imagestats
+        batch_transforms = transforms_15_channel
     else:
         print(f'No directive for {num_image_channels} image channels')
         
+    # no CHM if in predict mode
+    if predict_mode: data_layers = data_layers[:-1]
     return data_layers, batch_transforms
+
 
 def degree_to_radian(x):
         return (2 * np.pi) * x / 360.  
@@ -93,7 +96,7 @@ def bounds_to_latlon_encoding(bds, h,w, src_crs):
     return latlon_encoding
 
 
-def transforms_12_channel_latllon_plus_mask_imagestats(sample, img_nodata_val=-9999., mask_nodata_val=-9999., use_image_stats=True):
+def transforms_15_channel(sample, img_nodata_val=-9999., mask_nodata_val=-9999., use_image_stats=True):
     # s2 bands
     num_image_bands = len(s2_12_channel_codes)
     num_vis_bands = 3
@@ -101,14 +104,10 @@ def transforms_12_channel_latllon_plus_mask_imagestats(sample, img_nodata_val=-9
     
     # seventh band is the label, separate it 
     label_band = num_image_bands + num_vis_bands
-    sample['mask'] = torch.Tensor(sample['image'][label_band:label_band+1]).clone()
+    has_mask = len(sample['image']) > label_band
+    if has_mask:
+        sample['mask'] = torch.Tensor(sample['image'][label_band:label_band+1]).clone()
     
-    # make sure no imagery has nodata vals if mask has vals
-    img_nodata_mask = (sample['image'][:num_image_bands] == img_nodata_val).any(axis=0)
-    mask_nodata_mask = (sample['mask'] == mask_nodata_val)[0]
-    if img_nodata_mask[~mask_nodata_mask].any(): print('NODATA VAL detected in imagery')
-    
-        
     # these three bands are the visual image, separate them
     if len(sample['image']) > num_image_bands+1:
         sample['vis'] = sample['image'][num_image_bands:num_image_bands+num_vis_bands].clone()    
@@ -141,7 +140,7 @@ def transforms_12_channel_latllon_plus_mask_imagestats(sample, img_nodata_val=-9
 
 
     
-def transforms_13_channel_plus_mask_imagestats(sample, img_nodata_val=-9999., mask_nodata_val=-9999., use_image_stats=True):
+def transforms_13_channel(sample, img_nodata_val=-9999., mask_nodata_val=-9999., use_image_stats=True):
     # use e.g. when you need the B10 band for pretrained models
     
     # s2 bands
@@ -151,12 +150,9 @@ def transforms_13_channel_plus_mask_imagestats(sample, img_nodata_val=-9999., ma
     
     # seventh band is the label, separate it 
     label_band = num_image_bands + num_vis_bands
-    sample['mask'] = torch.Tensor(sample['image'][label_band:label_band+1]).clone()
-    
-    # make sure no imagery has nodata vals if mask has vals
-    img_nodata_mask = (sample['image'][:num_image_bands] == img_nodata_val).any(axis=0)
-    mask_nodata_mask = (sample['mask'] == mask_nodata_val)[0]
-    if img_nodata_mask[~mask_nodata_mask].any(): print('NODATA VAL detected in imagery')
+    has_mask = len(sample['image']) > label_band
+    if has_mask:
+        sample['mask'] = torch.Tensor(sample['image'][label_band:label_band+1]).clone()
     
     # these three bands are the visual image, separate them
     if len(sample['image']) > num_image_bands+1:
@@ -183,20 +179,17 @@ def transforms_13_channel_plus_mask_imagestats(sample, img_nodata_val=-9999., ma
     sample['image'][:,img_nodata_mask] = img_nodata_val
     return sample
 
-def transforms_12_channel_plus_mask_imagestats(sample, img_nodata_val=-9999., mask_nodata_val=-9999., use_image_stats=True):
+def transforms_12_channel(sample, img_nodata_val=-9999., mask_nodata_val=-9999., use_image_stats=True):
     # s2 bands
     num_image_bands = len(s2_12_channel_codes)
     num_vis_bands = 3
     img_nodata_mask = (sample['image'][:num_image_bands] == img_nodata_val).any(axis=0)
     
-    # seventh band is the label, separate it 
+    # separate label band if it's in the list of layers
     label_band = num_image_bands + num_vis_bands
-    sample['mask'] = torch.Tensor(sample['image'][label_band:label_band+1]).clone()
-    
-    # make sure no imagery has nodata vals if mask has vals
-    img_nodata_mask = (sample['image'][:num_image_bands] == img_nodata_val).any(axis=0)
-    mask_nodata_mask = (sample['mask'] == mask_nodata_val)[0]
-    if img_nodata_mask[~mask_nodata_mask].any(): print('NODATA VAL detected in imagery')
+    has_mask = len(sample['image']) > label_band
+    if has_mask:
+        sample['mask'] = torch.Tensor(sample['image'][label_band:label_band+1]).clone()
     
     # these three bands are the visual image, separate them
     if len(sample['image']) > num_image_bands+1:
@@ -219,17 +212,14 @@ def transforms_12_channel_plus_mask_imagestats(sample, img_nodata_val=-9999., ma
     sample['image'][:,img_nodata_mask] = img_nodata_val
     return sample
 
-def transforms_3_channel_rgbnir_plus_mask_imagestats(sample, img_nodata_val=-9999., mask_nodata_val=-9999., use_image_stats=True):
+def transforms_3_channel(sample, img_nodata_val=-9999., mask_nodata_val=-9999., use_image_stats=True):
     img_nodata_mask = (sample['image'][:3] == img_nodata_val).any(axis=0)
     
     # sixth band is the label, separate it 
     label_band = 6
-    sample['mask'] = torch.Tensor(sample['image'][label_band:label_band+1]).clone()
-    
-    # make sure no imagery has nodata vals if mask has vals
-    img_nodata_mask = (sample['image'][:3] == img_nodata_val).any(axis=0)
-    mask_nodata_mask = (sample['mask'] == mask_nodata_val)[0]#.any(axis=0)
-    if img_nodata_mask[~mask_nodata_mask].any(): print('NODATA VAL detected in imagery')
+    has_mask = len(sample['image']) > label_band
+    if has_mask:
+        sample['mask'] = torch.Tensor(sample['image'][label_band:label_band+1]).clone()
         
     # these three bands are the visual image, separate them
     if len(sample['image']) > 4:
@@ -251,45 +241,16 @@ def transforms_3_channel_rgbnir_plus_mask_imagestats(sample, img_nodata_val=-999
     sample['image'][:,img_nodata_mask] = img_nodata_val
     return sample
 
-def transforms_4_channel_rgbnir_plus_mask_imagestats(sample, img_nodata_val=-9999., mask_nodata_val=-9999., use_image_stats=True):
+def transforms_4_channel(sample, img_nodata_val=-9999., mask_nodata_val=-9999., use_image_stats=True):
     img_nodata_mask = (sample['image'][:4] == img_nodata_val).any(axis=0)
     
     # seventh band is the label, separate it 
     label_band = 7
-    sample['mask'] = torch.Tensor(sample['image'][label_band:label_band+1]).clone()
-    
-    # make sure no imagery has nodata vals if mask has vals
-    img_nodata_mask = (sample['image'][:4] == img_nodata_val).any(axis=0)
-    mask_nodata_mask = (sample['mask'] == mask_nodata_val)[0]#.any(axis=0)
-    if img_nodata_mask[~mask_nodata_mask].any(): print('NODATA VAL detected in imagery')
+    has_mask = len(sample['image']) > label_band
+    if has_mask:
+        sample['mask'] = torch.Tensor(sample['image'][label_band:label_band+1]).clone()
         
     # these three bands are the visual image, separate them
-    if len(sample['image']) > 5:
-        sample['vis'] = sample['image'][4:7].clone()    
-        
-    # bands 0-4 are the image
-    sample['image'] = sample['image'][:4].clone() 
-
-    if use_image_stats:
-        means = sentinel_layer_means_4_channel
-        stds = sentinel_layer_stds_4_channel
-    else:
-        means = torch.Tensor([0. for x in range(len(sentinel_layer_means))])
-        stds = torch.Tensor([10000. for x in range(len(sentinel_layer_means))])
-    
-    for b in range(len(sample['image'])):
-        sample['image'][b] = (sample['image'][b].float() - means[b]) / stds[b]
-        
-    sample['image'][:,img_nodata_mask] = img_nodata_val
-    return sample
-
-def transforms_4_channel_rgbnir_no_mask_imagestats(sample, img_nodata_val=-9999.,use_image_stats=True, verbose=False):
-    img_nodata_mask = (sample['image'][:4] == img_nodata_val).any(axis=0)
-        
-    # make sure no imagery has nodata vals 
-    if  verbose and img_nodata_mask.any(): print('NODATA VAL detected in imagery')
-    
-    # last three bands are the visual image, separate them
     if len(sample['image']) > 5:
         sample['vis'] = sample['image'][4:7].clone()    
         
@@ -421,7 +382,7 @@ class ChmDataModule(GeoDataModule):
         eval_pad: int = 5,
         length: int = 1000,
         num_workers: int = 0,
-        batch_transforms =  transforms_4_channel_rgbnir_plus_mask_imagestats,
+        batch_transforms =  transforms_4_channel,
         **kwargs: Any,
     ) -> None:
         
