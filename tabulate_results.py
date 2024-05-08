@@ -29,14 +29,19 @@ models_xception = [f'finetune_xceptionS2/{x}/{y}' for y in ['1_layers_tuned', '2
 models_unet = ['unet/randominit/12_channels'] + [f'unet/pretrained/{x}' for x in ['freeze_backbone_True', 'freeze_backbone_False']]
 # models = models_rf + models_fcn + models_xception + models_unet
 models = models_fcn + models_xception + models_unet
-# models_subset_training = ['local_only_models/128_filters/12_channels', 'unet/pretrained/freeze_backbone_False']
+models_subset_train_sites = ['local_only_models/128_filters/12_channels', 'finetune_xceptionS2/pretrained/3_layers_tuned']
 models_subset_training = ['local_only_models/128_filters/3_channels',
                           'local_only_models/128_filters/4_channels',
                           'local_only_models/128_filters/12_channels',
                           'local_only_models/128_filters/15_channels',
                           'finetune_xceptionS2/pretrained/1_layers_tuned',
+                          'finetune_xceptionS2/pretrained/2_layers_tuned',
                           'finetune_xceptionS2/pretrained/3_layers_tuned',
+                          'finetune_xceptionS2/randominit_nolatlon/1_layers_tuned',
+                          'finetune_xceptionS2/randominit_nolatlon/2_layers_tuned',
                           'finetune_xceptionS2/randominit_nolatlon/3_layers_tuned',
+                          'finetune_xceptionS2/randominit_latlon/1_layers_tuned',
+                          'finetune_xceptionS2/randominit_latlon/2_layers_tuned',
                           'finetune_xceptionS2/randominit_latlon/3_layers_tuned',
                           'unet/randominit/12_channels',
                           'unet/pretrained/freeze_backbone_True',
@@ -171,12 +176,12 @@ def get_results_by_geology():
 
                 with rasterio.open(f'{reference_map_by_site_dir}/{reference_map}_MAP_{site}_{resolution}m.tif') as file:
                     site_preds = file.read().ravel()
-                print(len(site_labels))
-                print(len(site_preds))
+                # print(len(site_labels))
+                # print(len(site_preds))
                 geology_array = np.load(f'../../../tambe_lab/Everyone/features/geology/geology_{resolution}m/{site}_geology_{resolution}m.npy').ravel()
-                print(len(geology_array))
+                # print(len(geology_array))
                 mask = geology_array == i+1
-                print(len(mask))
+                # print(len(mask))
                 assert len(site_labels) == len(mask)
                 labels = np.append(labels, site_labels[mask])
                 preds = np.append(preds, site_preds[mask])
@@ -253,14 +258,114 @@ def save_results_as_JSON(results_aggregated, results_by_split, results_by_site, 
     with open('results.json', 'w') as file:
         json.dump(results, file, indent=4)
 
+def get_reference_map_results():
+    results = {}
+
+    for reference_map in reference_maps:
+        results[reference_map] = {}
+
+        results_aggregated = []
+        results_by_split = {}
+        results_by_site = {}
+        results_by_height = {}
+        results_by_river = {}
+        results_by_geology = {}
+        labels = []
+        preds = []
+        reference_map_by_site_dir = f'{project_dir}/data/existing_reference_data/{reference_map.lower()}_maps_per_site_{resolution}m'
+        
+        for split_number in range(4):
+            labels_by_split = []
+            preds_by_split = []
+            test_sites = get_site_splits(split_seed)[split_number]['test_sites']
+            
+            for site in test_sites:
+                with rasterio.open(f'{lidar_coarsened_dir}/{site}/{site}_CHM_{resolution}m.tif') as file: # opens label tiff
+                    site_labels = file.read().ravel()
+                    labels = np.append(labels, site_labels)
+                    labels_by_split = np.append(labels_by_split, site_labels)
+
+                with rasterio.open(f'{reference_map_by_site_dir}/{reference_map}_MAP_{site}_{resolution}m.tif') as file: # opens prediction tiff
+                    site_preds = file.read().ravel()
+                    preds = np.append(preds, site_preds)
+                    preds_by_split = np.append(preds_by_split, site_preds)
+
+                results_by_site[site] = compare_aligned_data(site_labels, site_preds)
+            results_by_split[split_number] = compare_aligned_data(labels_by_split, preds_by_split)
+        results_aggregated = compare_aligned_data(labels, preds)
+
+        # stratify by height
+        for i in range(num_height_intervals):
+            results_by_height[f'{height_interval_bounds[i]}-{height_interval_bounds[i+1]}'] = compare_aligned_data(labels, preds, interval=[height_interval_bounds[i], height_interval_bounds[i+1]])
+
+        # stratify by river distance
+        for i in range(num_river_intervals):
+            labels = []
+            preds = []
+
+            for site in sites:
+                with rasterio.open(f'{lidar_coarsened_dir}/{site}/{site}_CHM_{resolution}m.tif') as file:
+                    site_labels = file.read().ravel()
+
+                with rasterio.open(f'{reference_map_by_site_dir}/{reference_map}_MAP_{site}_{resolution}m.tif') as file:
+                    site_preds = file.read().ravel()
+
+                site_river_distances = np.load(f'../../../tambe_lab/Everyone/features/river/distances_to_river_{resolution}m/{site}_distances_to_river_{resolution}m.npy').ravel()
+                mask = (site_river_distances >= river_interval_bounds[i]) & (site_river_distances <= river_interval_bounds[i+1])
+                assert len(site_labels) == len(mask)
+                labels = np.append(labels, site_labels[mask])
+                preds = np.append(preds, site_preds[mask])
+            
+            results_by_river[f'{river_interval_bounds[i]}-{river_interval_bounds[i+1]}'] = compare_aligned_data(labels, preds)
+
+        # stratify by geology
+        for i in range(num_geologies):
+            labels = []
+            preds = []
+
+            for site in sites:
+                print(site)
+                with rasterio.open(f'{lidar_coarsened_dir}/{site}/{site}_CHM_{resolution}m.tif') as file:
+                    print(file.read().shape)
+                    site_labels = file.read().ravel()
+
+                with rasterio.open(f'{reference_map_by_site_dir}/{reference_map}_MAP_{site}_{resolution}m.tif') as file:
+                    site_preds = file.read().ravel()
+                # print(len(site_labels))
+                # print(len(site_preds))
+                # geology_array = np.load(f'../../../tambe_lab/Everyone/features/geology/geology_{resolution}m/{site}_geology_{resolution}m.npy').ravel()
+                geology_array = np.load(f'../../../tambe_lab/Users/luciagordon/tree_mapping/data/features/geology/geology_{resolution}m/{site}_geology_{resolution}m.npy').ravel()
+                print(np.load(f'../../../tambe_lab/Users/luciagordon/tree_mapping/data/features/geology/geology_{resolution}m/{site}_geology_{resolution}m.npy').shape)
+                # print(len(geology_array))
+                mask = geology_array == i+1
+                # print(len(mask))
+                assert len(site_labels) == len(mask)
+                labels = np.append(labels, site_labels[mask])
+                preds = np.append(preds, site_preds[mask])
+            
+            results_by_geology[f'{geologies[i]}'] = compare_aligned_data(labels, preds)
+
+        results[reference_map]['total'] = results_aggregated
+        results[reference_map]['split'] = results_by_split
+        results[reference_map]['site'] = results_by_site
+        results[reference_map]['height'] = results_by_height
+        results[reference_map]['river'] = results_by_river
+        results[reference_map]['geology'] = results_by_geology
+
+    return results
+
 def save_subset_train_results_as_JSON():
     results_train_subset = {}
 
     for model in models_subset_training:
         results_train_subset[model] = {}
 
-        for n_train_sites in [12]:
-        # for n_train_sites in [3,6,9,12]:
+        if model in models_subset_train_sites:
+            train_site_counts = [3, 6]
+        else:
+            train_site_counts = [12]
+
+        for n_train_sites in train_site_counts:
             results_train_subset[model][n_train_sites] = {}
 
             for seed in range(10):
@@ -272,12 +377,12 @@ def save_subset_train_results_as_JSON():
                 labels = []
                 preds = []
                 model_output_dir = f'{outputs_dir}/subsetted_train_sites/{model}/{n_train_sites}_train_sites/seed_{seed}'
-                
+
                 for split_number in range(4):
                     labels_by_split = []
                     preds_by_split = []
                     test_sites = get_site_splits(split_seed)[split_number]['test_sites']
-                    
+
                     for site in test_sites:
                         with rasterio.open(f'{lidar_coarsened_dir}/{site}/{site}_CHM_{resolution}m.tif') as file: # opens label tiff
                             site_labels = file.read().ravel()
@@ -303,8 +408,12 @@ def save_subset_train_results_as_JSON():
     for setting in models_subset_training:
         results_subset_train_dict[setting] = {}
 
-        for n_train_sites in [12]:
-        # for n_train_sites in [3, 6, 9, 12]:
+        if setting in models_subset_train_sites:
+            train_site_counts = [3, 6]
+        else:
+            train_site_counts = [12]
+
+        for n_train_sites in train_site_counts:
             results_subset_train_dict[setting][f'{n_train_sites} train sites'] = {}
 
             for seed in range(10):
@@ -333,7 +442,9 @@ def save_subset_train_results_as_JSON():
         json.dump(results_subset_train_dict, file, indent=4)
 
 if __name__ == '__main__':
-    results_aggregated, results_by_split, results_by_site, results_by_height = get_results()
-    results_by_river = get_results_by_river()
-    save_results_as_JSON(results_aggregated, results_by_split, results_by_site, results_by_height, results_by_river)
+    # results_aggregated, results_by_split, results_by_site, results_by_height = get_results()
+    # results_by_river = get_results_by_river()
+    # results_by_geology = get_results_by_geology()
+    # save_results_as_JSON(results_aggregated, results_by_split, results_by_site, results_by_height, results_by_river)
     save_subset_train_results_as_JSON()
+    # get_reference_map_results()
