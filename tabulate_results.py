@@ -361,7 +361,7 @@ def save_subset_train_results_as_JSON():
         results_train_subset[model] = {}
 
         if model in models_subset_train_sites:
-            train_site_counts = [3, 6]
+            train_site_counts = [3, 6, 9, 12]
         else:
             train_site_counts = [12]
 
@@ -409,7 +409,7 @@ def save_subset_train_results_as_JSON():
         results_subset_train_dict[setting] = {}
 
         if setting in models_subset_train_sites:
-            train_site_counts = [3, 6]
+            train_site_counts = [3, 6, 9, 12]
         else:
             train_site_counts = [12]
 
