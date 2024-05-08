@@ -78,10 +78,6 @@ def compare_aligned_data(labels,
     masked_labels = labels[mask]
     masked_preds = preds[mask]
 
-    if not reference_map:
-        masked_preds[masked_preds < 0] = 0 # set negative predicted values to 0
-        masked_preds[masked_preds > 30] = 30 # set predicted values over 30 to 30
-
     r2 = sklearn.metrics.r2_score(masked_labels, masked_preds) # r^2 score
     mae = sklearn.metrics.mean_absolute_error(masked_labels, masked_preds) # mean absolute error
     mse = sklearn.metrics.mean_squared_error(masked_labels, masked_preds) # mean squared error
