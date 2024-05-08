@@ -32,9 +32,13 @@ def run_experiment_models_through_one_split(split_dir,
     del hparams['ignore']
     print(hparams)
     num_image_channels = hparams['in_channels']
-    img_layers, transforms_pred_model = get_default_layers_and_transforms(num_image_channels)
+    # predict_mode = True will use the sentinel 2 tiles that are bigger than the extent of the label files
+    img_layers, transforms_pred_model = get_default_layers_and_transforms(num_image_channels, predict_mode=True)
     patch_size = 64
     padding = hparams['pad_pixels']
+    
+    if 'unet' in split_dir:
+        padding = 28 # use only the innermost to try mosaik out artifacts near the edge of the patches
     stride = patch_size - 2*padding
 
     pred_args = {'patch_size': patch_size, 
@@ -63,6 +67,7 @@ def run_experiment_models_through_one_split(split_dir,
 def generate_nn_predictions(setting_dir, subsetted_train_sites, train_site_count, split, seed):
     random_seed = read_config_file('experiment_configs/train_baseline_local_models.yaml')['data']['split_seed']
    
+    
     if not subsetted_train_sites:
         output_dir = f'{project_dir}/model_output/{setting_dir}'
         os.makedirs(output_dir, exist_ok=True)

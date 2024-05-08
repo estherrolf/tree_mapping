@@ -6,7 +6,7 @@ import sys
 import torch
 import tqdm 
 import yaml
-from datamodules.chm_datamodule import ChmDataModule, make_site_dataset, transforms_4_channel_rgbnir_no_mask_imagestats
+from datamodules.chm_datamodule import ChmDataModule, make_site_dataset
 from eval_utils import get_lowest_val_checkpoint, init_model_from_checkpoint
 from experiment_utils import read_config_file, get_site_splits
 from torch.utils.data import DataLoader
