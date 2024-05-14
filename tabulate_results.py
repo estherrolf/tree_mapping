@@ -234,7 +234,50 @@ def save_subset_train_results_as_JSON():
     # save results as JSON
     results_subset_train_dict = {}
 
-    for setting in reference_maps + models_subset_training:
+    # reference maps
+    for setting in reference_maps:
+        results_subset_train_dict[setting] = {}
+        stratifiers = ['total', 'split', 'site', 'height', 'river', 'geology']
+
+        for stratifier in stratifiers:
+            results_subset_train_dict[setting][stratifier] = {}
+
+            if stratifier == 'total':
+                for metric in ['r2', 'mae', 'mse', 'rmse']:
+                    results_subset_train_dict[setting][stratifier][metric] = float(results_train_subset[setting][stratifier][metric])
+            elif stratifier == 'split':
+                for split in results_train_subset[setting][n_train_sites][seed][stratifier]:
+                    results_subset_train_dict[setting][stratifier][split] = {}
+                    
+                    for metric in ['r2', 'mae', 'mse', 'rmse']:
+                        results_subset_train_dict[setting][stratifier][split][metric] = float(results_train_subset[setting][stratifier][split][metric])
+            elif stratifier == 'site':
+                for site in results_train_subset[setting][n_train_sites][seed][stratifier]:
+                    results_subset_train_dict[setting][stratifier][site] = {}
+                    
+                    for metric in ['r2', 'mae', 'mse', 'rmse']:
+                        results_subset_train_dict[setting][stratifier][site][metric] = float(results_train_subset[setting][stratifier][site][metric])
+            elif stratifier == 'height':
+                for interval in results_train_subset[setting][n_train_sites][seed][stratifier]:
+                    results_subset_train_dict[setting][stratifier][interval] = {}
+
+                    for metric in ['perc_10', 'q1', 'median', 'q3', 'perc_90']:
+                        results_subset_train_dict[setting][stratifier][interval][metric] = float(results_train_subset[setting][stratifier][interval][metric])
+            elif stratifier == 'river':
+                for interval in results_train_subset[setting][n_train_sites][seed][stratifier]:
+                    results_subset_train_dict[setting][stratifier][interval] = {}
+
+                    for metric in ['perc_10', 'q1', 'median', 'q3', 'perc_90']:
+                        results_subset_train_dict[setting][stratifier][interval][metric] = float(results_train_subset[setting][stratifier][interval][metric])
+            elif stratifier == 'geology':
+                for category in results_train_subset[setting][n_train_sites][seed][stratifier]:
+                    results_subset_train_dict[setting][stratifier][category] = {}
+
+                    for metric in ['perc_10', 'q1', 'median', 'q3', 'perc_90']:
+                        results_subset_train_dict[setting][stratifier][category][metric] = float(results_train_subset[setting][stratifier][category][metric])
+
+    # models
+    for setting in models_subset_training:
         results_subset_train_dict[setting] = {}
 
         train_site_counts = [3, 6, 9, 12] if model in models_subset_train_sites else [12]
