@@ -155,5 +155,4 @@ if __name__ == '__main__':
                 # run through the test set to make tifs of this models output
                 predict_test_sites_with_rf(test_sites, model, data_cfg, save_name,save_dir=save_dir)
                 
-            print()
         print(f'split {this_split_number} took {(time.time()-t1)/60:.2f} minutes')

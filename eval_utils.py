@@ -64,23 +64,18 @@ def match_map_to_labels(eval_site_id,
                                     output_fn=out_fn, 
                                     target_fn=target_fn,
                                     verbose=False)
-                     
+
     return out_fn                
 
 def compare_aligned_data(labels, 
                          preds, 
                          interval=[0, 30],
                          nodata_value=-9999.0,
-                         reference_map=False,
                          return_vals=False):
 
     mask = (labels != nodata_value) & (preds != nodata_value) & (labels >= interval[0]) & (labels <= interval[1]) # excludes pixels for which we have no labels or predictions or whose labels are out of range in the current analysis
     masked_labels = labels[mask]
     masked_preds = preds[mask]
-
-    if not reference_map:
-        masked_preds[masked_preds < 0] = 0 # set negative predicted values to 0
-        masked_preds[masked_preds > 30] = 30 # set predicted values over 30 to 30
 
     r2 = sklearn.metrics.r2_score(masked_labels, masked_preds) # r^2 score
     mae = sklearn.metrics.mean_absolute_error(masked_labels, masked_preds) # mean absolute error

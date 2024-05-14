@@ -90,7 +90,7 @@ def predict_site_with_model(site_id,
                             batch_size = pred_args['batch_size'],
                             num_workers = pred_args['num_workers'],
                             collate_fn = stack_samples)
-    
+
     # run inference
     # make an array of the right shape
     eval_input_dir = f'{DATA_DIR}/int/sentinel/sentinel_by_site_32736_10m/{site_id}'
