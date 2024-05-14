@@ -64,14 +64,13 @@ def match_map_to_labels(eval_site_id,
                                     output_fn=out_fn, 
                                     target_fn=target_fn,
                                     verbose=False)
-                     
+
     return out_fn                
 
 def compare_aligned_data(labels, 
                          preds, 
                          interval=[0, 30],
                          nodata_value=-9999.0,
-                         reference_map=False,
                          return_vals=False):
 
     mask = (labels != nodata_value) & (preds != nodata_value) & (labels >= interval[0]) & (labels <= interval[1]) # excludes pixels for which we have no labels or predictions or whose labels are out of range in the current analysis
