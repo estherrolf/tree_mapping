@@ -66,8 +66,7 @@ def run_experiment_models_through_one_split(split_dir,
 
 def generate_nn_predictions(setting_dir, subsetted_train_sites, train_site_count, split, seed):
     random_seed = read_config_file('experiment_configs/train_baseline_local_models.yaml')['data']['split_seed']
-   
-    
+
     if not subsetted_train_sites:
         output_dir = f'{project_dir}/model_output/{setting_dir}'
         os.makedirs(output_dir, exist_ok=True)

@@ -1,47 +1,90 @@
 # Tree Canopy Height Mapping
 
+Run all commands from the `tree_mapping` directory.
+
 ## Set up the environment
 Create and activate a conda environment using 
 ```
 conda env create -f tree_mapping.yml
 conda activate tree_mapping
 ```
+You will need to modify the path to the conda environment in all the bash files depending on where you store the environment.
 
 ## Prepare data
-First, from the `tree_mapping` directory, to download the relevant sentinel tiles, run the scripts `download_datasets.sh`. You will also need to get download:
- - the CHM files (from Esther or Jenia right now).
+First, you will need to get the 1m-resolution LiDAR-derived CHM files (from Esther or Jenia right now).
 
 For comparison to existing data products, you will need to download:
- - existing tree cover predicted maps from [Lang et al. 2023](https://www.nature.com/articles/s41559-023-02206-6), by downloading the relevant tiles from their [tile browser](https://langnico.github.io/globalcanopyheight/assets/tile_index.html).
- - tree cover maps from Glad [project page](https://glad.umd.edu/dataset/gedi).
+- existing tree cover predicted maps from [Lang et al. 2023](https://www.nature.com/articles/s41559-023-02206-6), by downloading the relevant tiles from their [tile browser](https://langnico.github.io/globalcanopyheight/assets/tile_index.html)
+- tree cover maps from the GLAD [project page](https://glad.umd.edu/dataset/gedi)
+- TODO: ADD META MAP
 
 Create a config file within the tree_mapping code directory called `project_dir.yaml`. Add a single line of the form `project_dir: '../../../tambe_lab/Users/luciagordon/tree_mapping'` that provides the relative path from the code directory to the directory where you want to store data, models, results, etc. This directory should be in a location with ~50GB available.
 
-Second, from the code directory, run `run_data_preprocessing.sh`, which will produce the data needed for training and evaluating our models: 
-1. Aggregate LiDAR-derived CHM data by site (at native 1m resolution and coarsened 10m resolution)
-2. Aggregate Sentinel2 data and project to match the coarsened CHM data for each site
+Second, from the code directory, run
+```
+bash run_data_preprocessing.sh
+```
+which will produce the data needed for training and evaluating our models: 
+1. Download the Sentinel-2 tiles that cover our sites
+2. Aggregate LiDAR-derived CHM data by site (at native 1m resolution and coarsened 10m resolution)
 3. Extract the per-site data from the existing global tree canopy height maps
-
-[TODO: (eventually) any other layers]
+4. Aggregate Sentinel-2 data and project to match the coarsened CHM data for each site
 
 The notebook `tree_mapping/process_data/visualize_data_preparation` will show you what each of these steps is doing.
 
-## Evaluating existing data products
-Run `eval_reference_maps.py`.
+To generate the data for the ecological features against which to stratify performance, you will also need to obtain `river_shapefile` and `geology_soil_vegetation_shapefile`. Then you can run
+```
+python rasterize_line.py
+python rasterize_polygon.py
+```
+to convert the river and geology shapefiles into tiffs, respectively. Then you can run
+```
+python feature_by_site.py
+```
+to extract the feature data for all the sites.
 
-## Training local models
-### Local only models
-Run `python train_base_models.py config_filepath`. An example config file is given in `experiment_configs/train_baseline_local_models.yaml`
+## Compare to globally pretrained models
+To compare to globally trained models to predict tree canopy height [Lang et al. 2023](https://www.nature.com/articles/s41559-023-02206-6), download their source code from the [global-canopy-height-model](https://github.com/langnico/global-canopy-height-model/releases/tag/v1.0-trained-model-weights) GitHub page (v1.0), and put it at the same directory level as this repository. The configuration files for training with pretrained and randomly initialized models from that paper are in the `experiment_configs` folder. 
 
-To generate output tifs of the models applied in all the test sites that apply to their training/validation split, run `python model_to_tif.py config_filepath`. (see the running google doc for why we generate splits this way)
+## Train models
+### Neural networks
+First, you need to perform hyperparameter tuning for all the model settings with
+```
+bash run_hyperparameter_tuning.sh
+```
+Then run
+```
+bash run_10_seeds.sh
+```
+to train each model setting using 10 different random seeds and then use those trained models to generate canopy height predictions for all the sites. The train-test-validation splits are designed such that each site appears in the test set for precisely one split. To train models on a subset of the local data, use
+```
+sbatch run_train_nn_with_subsetted_train_sites.sh train_baseline_local_models.yaml channels 12 subset_train
+```
+where the config file, `channels`, and `12` will change depending on what model you want to train.
 
 To evaluate local models and visualize predictions, run through the steps in `eval_all_models.ipynb`. 
 
-To train and and produce maps for the the random forest models, use `run_through_trained_RF_models.py`. Use `evalute_rf_output.py` to evaluate and visualize the output. The hyperparameter tuning results are generated by running `python hp_search_random_forest.py experiment_configs/tune_rf_12_channel.py` (or a different configuration file).
+### Random forests
+To train and produce maps for the the random forest models, use
+```
+python run_through_trained_RF_models.py
+```
+Run
+```
+python evalute_rf_output.py
+```
+to evaluate and visualize the output. The hyperparameter tuning results are generated by running
+```
+python hp_search_random_forest.py experiment_configs/tune_rf_12_channel.py
+```
+(or a different configuration file). To train models on a subset of the local data, use
+```
+python run_through_trained_RF_models.py
+```
 
-To train models on a subset of the local data, use `run_through_trained_RF_models.py` or [TODO] depending on what type of model you want to train.
-
-## Comparing to globally pretrained models
-To compare to globally trained models to predict tree canopy height [Lang et al. 2023](https://www.nature.com/articles/s41559-023-02206-6), download their source code from the [global-canopy-height-model](https://github.com/langnico/global-canopy-height-model/releases/tag/v1.0-trained-model-weights) GitHub page (v1.0), and put it at the same directory level as this repository. 
-
-The configuration files for training with pretrained and randomly initialized models from that paper are in the `experiment_configs` folder. 
+## Evaluate models
+Run
+```
+sbatch run_tabulate_results.sh
+```
+in order to generate a JSON file containing all of the performance metrics needed to create the plots.
