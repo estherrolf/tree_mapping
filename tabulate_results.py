@@ -141,8 +141,9 @@ def save_subset_train_results_as_JSON():
     for model in models_subset_training:
         results_train_subset[model] = {}
 
-        train_site_counts = [3, 6, 9, 12] if model in models_subset_train_sites else [12]
-
+       # train_site_counts = [3, 6, 9, 12] if model in models_subset_train_sites else [12]
+        train_site_counts = [12]
+        
         for n_train_sites in train_site_counts:
             results_train_subset[model][n_train_sites] = {}
 
@@ -246,34 +247,34 @@ def save_subset_train_results_as_JSON():
                 for metric in ['r2', 'mae', 'mse', 'rmse']:
                     results_subset_train_dict[setting][stratifier][metric] = float(results_train_subset[setting][stratifier][metric])
             elif stratifier == 'split':
-                for split in results_train_subset[setting][n_train_sites][seed][stratifier]:
+                for split in results_train_subset[setting][stratifier]:
                     results_subset_train_dict[setting][stratifier][split] = {}
                     
                     for metric in ['r2', 'mae', 'mse', 'rmse']:
                         results_subset_train_dict[setting][stratifier][split][metric] = float(results_train_subset[setting][stratifier][split][metric])
             elif stratifier == 'site':
-                for site in results_train_subset[setting][n_train_sites][seed][stratifier]:
+                for site in results_train_subset[setting][stratifier]:
                     results_subset_train_dict[setting][stratifier][site] = {}
                     
                     for metric in ['r2', 'mae', 'mse', 'rmse']:
                         results_subset_train_dict[setting][stratifier][site][metric] = float(results_train_subset[setting][stratifier][site][metric])
             elif stratifier == 'height':
-                for interval in results_train_subset[setting][n_train_sites][seed][stratifier]:
+                for interval in results_train_subset[setting][stratifier]:
                     results_subset_train_dict[setting][stratifier][interval] = {}
 
-                    for metric in ['perc_10', 'q1', 'median', 'q3', 'perc_90']:
+                    for metric in ['perc_10', 'q1', 'median', 'q3', 'perc_90', 'perc_10_abs', 'q1_abs', 'median_abs', 'q3_abs', 'perc_90_abs']:
                         results_subset_train_dict[setting][stratifier][interval][metric] = float(results_train_subset[setting][stratifier][interval][metric])
             elif stratifier == 'river':
-                for interval in results_train_subset[setting][n_train_sites][seed][stratifier]:
+                for interval in results_train_subset[setting][stratifier]:
                     results_subset_train_dict[setting][stratifier][interval] = {}
 
-                    for metric in ['perc_10', 'q1', 'median', 'q3', 'perc_90']:
+                    for metric in ['perc_10', 'q1', 'median', 'q3', 'perc_90', 'perc_10_abs', 'q1_abs', 'median_abs', 'q3_abs', 'perc_90_abs']:
                         results_subset_train_dict[setting][stratifier][interval][metric] = float(results_train_subset[setting][stratifier][interval][metric])
             elif stratifier == 'geology':
-                for category in results_train_subset[setting][n_train_sites][seed][stratifier]:
+                for category in results_train_subset[setting][stratifier]:
                     results_subset_train_dict[setting][stratifier][category] = {}
 
-                    for metric in ['perc_10', 'q1', 'median', 'q3', 'perc_90']:
+                    for metric in ['perc_10', 'q1', 'median', 'q3', 'perc_90', 'perc_10_abs', 'q1_abs', 'median_abs', 'q3_abs', 'perc_90_abs']:
                         results_subset_train_dict[setting][stratifier][category][metric] = float(results_train_subset[setting][stratifier][category][metric])
 
     # models
@@ -312,22 +313,22 @@ def save_subset_train_results_as_JSON():
                         for interval in results_train_subset[setting][n_train_sites][seed][stratifier]:
                             results_subset_train_dict[setting][f'{n_train_sites} train sites'][f'seed {seed}'][stratifier][interval] = {}
 
-                            for metric in ['perc_10', 'q1', 'median', 'q3', 'perc_90']:
+                            for metric in ['perc_10', 'q1', 'median', 'q3', 'perc_90', 'perc_10_abs', 'q1_abs', 'median_abs', 'q3_abs', 'perc_90_abs']:
                                 results_subset_train_dict[setting][f'{n_train_sites} train sites'][f'seed {seed}'][stratifier][interval][metric] = float(results_train_subset[setting][n_train_sites][seed][stratifier][interval][metric])
                     elif stratifier == 'river':
                         for interval in results_train_subset[setting][n_train_sites][seed][stratifier]:
                             results_subset_train_dict[setting][f'{n_train_sites} train sites'][f'seed {seed}'][stratifier][interval] = {}
 
-                            for metric in ['perc_10', 'q1', 'median', 'q3', 'perc_90']:
+                            for metric in ['perc_10', 'q1', 'median', 'q3', 'perc_90', 'perc_10_abs', 'q1_abs', 'median_abs', 'q3_abs', 'perc_90_abs']:
                                 results_subset_train_dict[setting][f'{n_train_sites} train sites'][f'seed {seed}'][stratifier][interval][metric] = float(results_train_subset[setting][n_train_sites][seed][stratifier][interval][metric])
                     elif stratifier == 'geology':
                         for category in results_train_subset[setting][n_train_sites][seed][stratifier]:
                             results_subset_train_dict[setting][f'{n_train_sites} train sites'][f'seed {seed}'][stratifier][category] = {}
 
-                            for metric in ['perc_10', 'q1', 'median', 'q3', 'perc_90']:
+                            for metric in ['perc_10', 'q1', 'median', 'q3', 'perc_90', 'perc_10_abs', 'q1_abs', 'median_abs', 'q3_abs', 'perc_90_abs']:
                                 results_subset_train_dict[setting][f'{n_train_sites} train sites'][f'seed {seed}'][stratifier][category][metric] = float(results_train_subset[setting][n_train_sites][seed][stratifier][category][metric])
 
-    with open('results_subset_train.json', 'w') as file:
+    with open('results_subset_train_12.json', 'w') as file:
         json.dump(results_subset_train_dict, file, indent=4)
 
 if __name__ == '__main__':
