@@ -44,7 +44,7 @@ python feature_by_site.py
 to extract the feature data for all the sites.
 
 ## Compare to globally pretrained models
-To compare to globally trained models to predict tree canopy height [Lang et al. 2023](https://www.nature.com/articles/s41559-023-02206-6), download their source code from the [global-canopy-height-model](https://github.com/langnico/global-canopy-height-model/releases/tag/v1.0-trained-model-weights) GitHub page (v1.0), and put it at the same directory level as this repository. The configuration files for training with pretrained and randomly initialized models from that paper are in the `experiment_configs` folder. 
+To compare to the globally trained models to predict tree canopy height from [Lang et al. 2023](https://www.nature.com/articles/s41559-023-02206-6), download their source code from the [global-canopy-height-model](https://github.com/langnico/global-canopy-height-model/releases/tag/v1.0-trained-model-weights) GitHub page (v1.0), and put it at the same directory level as this repository. The configuration files for training with pretrained and randomly initialized models from that paper are in the `experiment_configs` folder. 
 
 ## Train models
 ### Neural networks
@@ -88,3 +88,5 @@ Run
 sbatch run_tabulate_results.sh
 ```
 in order to generate a JSON file containing all of the performance metrics needed to create the plots.
+
+Notebooks to generate figures and tables are given in the `figure_notebooks` directory.
