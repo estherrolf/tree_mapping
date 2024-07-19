@@ -1,6 +1,8 @@
 # imports
 from osgeo import gdal
+import ee
 import geo_utils
+import numpy as np
 import os
 import rasterio
 import sys
@@ -37,6 +39,21 @@ def set_NaN_GLAD_map():
 
     print('GLAD tiff NaN set')
 
+def preprocess_pauls_map():
+    ee.Initialize(project='mmearth-bench') # initializes EE with our project
+
+    with rasterio.open(f'{data_dir}/raw/global_tch_maps/pauls_map.tif') as tiff:
+        tiff_metadata = tiff.meta
+        tiff_array = tiff.read() / 100 # convert from cm to m
+
+    processed_tiff_metadata = tiff_metadata.copy()
+    processed_tiff_metadata['nodata'] = 255
+
+    with rasterio.open(f'{data_dir}/raw/global_tch_maps/pauls_map_processed.tif', 'w', **processed_tiff_metadata) as out_file:
+        out_file.write(tiff_array)
+
+    print('Pauls tiff NaN set')
+
 def make_per_site_files(map, map_tiff, resolution):
     '''Makes per-site files for the ETH and GLAD maps to match the coarsened LiDAR data'''
 
@@ -62,13 +79,16 @@ def make_per_site_files(map, map_tiff, resolution):
 if __name__ == '__main__':
     merge_ETH_maps()
     set_NaN_GLAD_map()
+    preprocess_pauls_map()
 
     eth_tiff_path = f'{data_dir}/int/global_tch_maps/ETH_GlobalCanopyHeight_10m_merged.tif'
     glad_tiff_path = f'{data_dir}/raw/global_tch_maps/Forest_height_2019_SAFR_processed.tif'
+    pauls_tiff_path =  f'{data_dir}/raw/global_tch_maps/pauls_map_processed.tif'
 
     for resolution in [10, 30]:
         make_per_site_files(map='eth', map_tiff=eth_tiff_path, resolution=resolution)
         make_per_site_files(map='glad', map_tiff=glad_tiff_path, resolution=resolution)
+        make_per_site_files(map='pauls', map_tiff=pauls_tiff_path, resolution=resolution)
 
     os.remove(eth_tiff_path)
     os.remove(glad_tiff_path)

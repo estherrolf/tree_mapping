@@ -10,6 +10,7 @@ dependencies:
     - azure-storage-blob
     - black[jupyter]>=21.8
     - deltalake
+    - earthengine-api
     - flake8>=3.8
     - torchgeo[datasets,docs,style,tests]>=0.4.0
     - isort[colors]>=5.8

@@ -1,5 +1,7 @@
 # imports
 from osgeo import gdal
+from pyproj import Proj, Transformer
+import ee
 import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
 import numpy as np
@@ -70,7 +72,7 @@ def plot_distance_to_feature(feature, resolution):
     '''Plots distance to feature and puts box around a site'''
     lidar_dir = f'{get_project_dir()}/data/int/lidar/lidar_by_site_32736_{resolution}m'
     sites = os.listdir(lidar_dir)
-    site = sites[2]
+    site = sites[-1]
     array = np.load(f'{get_project_dir()}/data/features/{feature}/distances_to_{feature}_{resolution}m/{site}_distances_to_{feature}_{resolution}m.npy')
 
     plt.figure(dpi=300)
@@ -104,7 +106,7 @@ def plot_feature_by_site(feature, resolution):
     '''Plots distance to feature and puts box around a site'''
     lidar_dir = f'{get_project_dir()}/data/int/lidar/lidar_by_site_32736_{resolution}m'
     sites = os.listdir(lidar_dir)
-    site = sites[2]
+    site = sites[-1]
     array = np.load(f'{get_project_dir()}/data/features/{feature}/{feature}_{resolution}m/{site}_{feature}_{resolution}m.npy')
     categories_to_numbers = {'background': 0, 'Igneous': 1, 'Unconsolidated': 2, 'Sedimentary': 3, 'Dambo colluvium': 4, 'Undifferentiated': 5}
     plt.figure(dpi=300)
@@ -187,7 +189,7 @@ def plot_tiff(path):
     plt.figure(dpi=300)
     plt.imshow(array) # plot the array of pixel values as an image
     plt.axis('off') # remove axes        
-    plt.savefig(f'{path.split("/")[-1].split(".")[0]}.png', bbox_inches='tight', pad_inches=0)
+    plt.savefig(f'figures/{path.split("/")[-1].split(".")[0]}.png', bbox_inches='tight', pad_inches=0)
     plt.close() # close the image to save memory
 
 def find_large_values():
@@ -234,6 +236,94 @@ def str_to_bool(string):
 
     return False
 
+def get_site_sizes():
+    lidar_1m_sites_path = '/n/tambe_lab/Users/luciagordon/tree_mapping/data/raw/lidar_by_site_32736'
+    sites = [tiff for tiff in os.listdir(lidar_1m_sites_path)]
+    sizes = []
+
+    for site in sites:
+        left, bottom, right, top = rasterio.open(f'{lidar_1m_sites_path}/{site}').bounds
+        size = (right - left)/1000 * (top - bottom)/1000
+        sizes.append(size)
+        print(site, size)
+
+    print(np.mean(sizes))
+
+def get_label_variance():
+    lidar_1m_sites_path = '/n/tambe_lab/Users/luciagordon/tree_mapping/data/raw/lidar_by_site_32736'
+    lidar_10m_sites_path = f'{get_project_dir()}/data/int/lidar/lidar_by_site_32736_10m'
+
+    sites_1m = [tiff for tiff in os.listdir(lidar_1m_sites_path)]
+    sites_10m = [tiff for tiff in os.listdir(lidar_10m_sites_path)]
+
+    labels_1m = []
+    labels_10m = []
+
+    for site in sites_1m:
+        with rasterio.open(f'{lidar_1m_sites_path}/{site}') as tiff:
+            array = tiff.read(1).ravel()
+            array = array[array != -9999.0].tolist()
+            labels_1m += array
+    print(f'Done 1m')
+
+    for site in sites_10m:
+        with rasterio.open(f'{lidar_10m_sites_path}/{site}/{site}_CHM_10m.tif') as tiff:
+            array = tiff.read(1).ravel()
+            array = array[array != -9999.0].tolist()
+            labels_10m += array
+    print(f'Done 10m')
+
+    var_1m = np.std(labels_1m) ** 2
+    var_10m = np.std(labels_10m) ** 2
+
+    print(var_1m, var_10m)
+
+def get_study_bounds():
+    lidar_10m_sites_path = '/n/tambe_lab/Everyone/tree_mapping/lidar_by_site_32736_10m'
+    sites = os.listdir(lidar_10m_sites_path)
+    epsg_code = None
+    bounds = {'left': None, 'bottom': None, 'right': None, 'top': None}
+
+    for site in sites:
+        with rasterio.open(f'{lidar_10m_sites_path}/{site}/{site}_CHM_10m.tif') as tiff:
+            site_bounds = tiff.bounds
+
+            if epsg_code == None:
+                epsg_code = str(tiff.crs)
+
+            for i, pair in enumerate(bounds.items()):
+                key, val = pair
+
+                if val == None:
+                    bounds[key] = site_bounds[i]
+                elif key == 'left' or key == 'bottom':
+                    bounds[key] = min(val, site_bounds[i])
+                elif key == 'right' or key == 'top':
+                    bounds[key] = max(val, site_bounds[i])
+
+    south = True if epsg_code.split('EPSG:')[1][:3] == '327' else False
+    zone = epsg_code.split('EPSG:')[1][3:]
+    utm_proj = Proj(proj='utm', zone=zone, ellps='WGS84', south=south)
+    latlon_proj = Proj(proj='latlong', datum='WGS84')
+    transformer = Transformer.from_proj(utm_proj, latlon_proj)
+    left, top = transformer.transform(bounds['left'], bounds['top'])
+    right, bottom = transformer.transform(bounds['right'], bounds['bottom'])
+    print([left, bottom, right, top])
+    return [left, bottom, right, top]
+
+def download_pauls_map():
+    ee.Initialize(project='mmearth-bench') # initializes EE with our project
+    study_area = ee.Geometry.Rectangle(get_study_bounds()) # [31.901358424044897, -24.597511950923213, 32.306272925856064, -23.938060873391656]
+    image = ee.Image('projects/worldwidemap/assets/canopyheight2020/36S_cog').clip(study_area)
+    image_info = image.getInfo()
+    task = ee.batch.Export.image.toDrive(image=image,
+                                         description='pauls_map',
+                                         folder='EarthEngineImages',
+                                         fileNamePrefix='pauls_map',
+                                         region=image_info['properties']['system:footprint']['coordinates'],
+                                         scale=image_info['bands'][0]['crs_transform'][0])
+    task.start()
+
 if __name__ == '__main__':
     # for resolution in [10,30]:
     #     global_data_lidar_NaN_comparison(map='eth', resolution=resolution)
@@ -243,8 +333,10 @@ if __name__ == '__main__':
     # plot_distance_to_feature(feature='river', resolution=10)
     # plot_feature_by_site(feature='geology', resolution=10)
 
-    everyone_folder = '../../../tambe_lab/Everyone/data_mar8/raw/lidar_by_site_32736'
-    my_folder = '../../../tambe_lab/Users/luciagordon/tree_mapping/data/raw/lidar_by_site_32736'
+    # everyone_folder = '../../../tambe_lab/Everyone/data_mar8/raw/lidar_by_site_32736'
+    # my_folder = '../../../tambe_lab/Users/luciagordon/tree_mapping/data/raw/lidar_by_site_32736'
 
-    for tiff in os.listdir(everyone_folder):
-        print(compare_tiffs(f'{everyone_folder}/{tiff}', f'{my_folder}/{tiff}'))
+    # for tiff in os.listdir(everyone_folder):
+    #     print(compare_tiffs(f'{everyone_folder}/{tiff}', f'{my_folder}/{tiff}'))
+
+    download_pauls_map()
