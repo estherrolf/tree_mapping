@@ -14,10 +14,10 @@ You will need to modify the path to the conda environment in all the bash files 
 First, you will need to get the 1m-resolution LiDAR-derived CHM files (from Esther or Jenia right now).
 
 For comparison to existing data products, you will need to download:
-- existing tree cover predicted maps from [Lang et al. 2023](https://www.nature.com/articles/s41559-023-02206-6), by downloading the relevant tiles from their [tile browser](https://langnico.github.io/globalcanopyheight/assets/tile_index.html)
-- tree cover maps from the GLAD [project page](https://glad.umd.edu/dataset/gedi)
-- TODO: ADD META MAP
-- For the Pauls map, run the `download_pauls_map()` function in `utils.py`. Note this requires creating a GEE project and typing the name into the `ee.Initialize()` function. Copy the tiff into `tree_mapping/data/raw/global_tch_maps` as `pauls_map.tif`. 
+- existing tree canopy height predicted maps from [Lang et al. 2023](https://www.nature.com/articles/s41559-023-02206-6), by downloading the relevant tiles from their [tile browser](https://langnico.github.io/globalcanopyheight/assets/tile_index.html)
+- existing tree canopy height maps from the GLAD [project page](https://glad.umd.edu/dataset/gedi)
+- existing tree canopy height maps from the WRI and Meta [(hosted on AWS)](https://registry.opendata.aws/dataforgood-fb-forests/) -- or use `acquire_data/download_meta_tiles.py` 
+- For the Pauls map, run the `download_pauls_map()` function in `utils.py`. Note this requires creating a GEE project and typing the name into the `ee.Initialize()` function. Copy the tiff into `tree_mapping/data/raw/global_tch_maps` as `pauls_map.tif`.
 
 Create a config file within the tree_mapping code directory called `project_dir.yaml`. Add a single line of the form `project_dir: '../../../tambe_lab/Users/luciagordon/tree_mapping'` that provides the relative path from the code directory to the directory where you want to store data, models, results, etc. This directory should be in a location with ~50GB available.
 
@@ -45,7 +45,7 @@ python feature_by_site.py
 to extract the feature data for all the sites.
 
 ## Compare to globally pretrained models
-To compare to globally trained models to predict tree canopy height [Lang et al. 2023](https://www.nature.com/articles/s41559-023-02206-6), download their source code from the [global-canopy-height-model](https://github.com/langnico/global-canopy-height-model/releases/tag/v1.0-trained-model-weights) GitHub page (v1.0), and put it at the same directory level as this repository. The configuration files for training with pretrained and randomly initialized models from that paper are in the `experiment_configs` folder. 
+To compare to the globally trained models to predict tree canopy height from [Lang et al. 2023](https://www.nature.com/articles/s41559-023-02206-6), download their source code from the [global-canopy-height-model](https://github.com/langnico/global-canopy-height-model/releases/tag/v1.0-trained-model-weights) GitHub page (v1.0), and put it at the same directory level as this repository. The configuration files for training with pretrained and randomly initialized models from that paper are in the `experiment_configs` folder. 
 
 ## Train models
 ### Neural networks
@@ -89,3 +89,5 @@ Run
 sbatch run_tabulate_results.sh
 ```
 in order to generate a JSON file containing all of the performance metrics needed to create the plots.
+
+Notebooks to generate figures and tables are given in the `figure_notebooks` directory.
