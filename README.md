@@ -17,6 +17,7 @@ For comparison to existing data products, you will need to download:
 - existing tree canopy height predicted maps from [Lang et al. 2023](https://www.nature.com/articles/s41559-023-02206-6), by downloading the relevant tiles from their [tile browser](https://langnico.github.io/globalcanopyheight/assets/tile_index.html)
 - existing tree canopy height maps from the GLAD [project page](https://glad.umd.edu/dataset/gedi)
 - existing tree canopy height maps from the WRI and Meta [(hosted on AWS)](https://registry.opendata.aws/dataforgood-fb-forests/) -- or use `acquire_data/download_meta_tiles.py` 
+- For the Pauls map, run the `download_pauls_map()` function in `utils.py`. Note this requires creating a GEE project and typing the name into the `ee.Initialize()` function. Copy the tiff into `tree_mapping/data/raw/global_tch_maps` as `pauls_map.tif`.
 
 Create a config file within the tree_mapping code directory called `project_dir.yaml`. Add a single line of the form `project_dir: '../../../tambe_lab/Users/luciagordon/tree_mapping'` that provides the relative path from the code directory to the directory where you want to store data, models, results, etc. This directory should be in a location with ~50GB available.
 

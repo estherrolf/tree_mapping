@@ -22,7 +22,7 @@ num_river_intervals = len(river_interval_bounds) - 1
 num_geologies = len(geologies)
 lidar_coarsened_dir = f'{project_dir}/lidar_by_site_32736_{resolution}m'
 sites = sorted([x for x in os.listdir(lidar_coarsened_dir) if not x.startswith('.')])
-reference_maps = ['ETH', 'GLAD', 'META']
+reference_maps = ['ETH', 'GLAD', 'META', 'PAULS']
 models = ['random_forest/4_channels',
           'random_forest/12_channels',
           'local_only_models/128_filters/3_channels',
@@ -325,7 +325,7 @@ def save_results_as_JSON():
                             for metric in ['perc_10', 'q1', 'median', 'q3', 'perc_90']:
                                 results_dict[setting][f'{n_train_sites} train sites'][f'seed {seed}'][stratifier][category][metric] = float(results[setting][n_train_sites][seed][stratifier][category][metric])
 
-    with open('results.json', 'w') as file:
+    with open(f'{project_dir}/results.json', 'w') as file:
         json.dump(results_dict, file, indent=4)
 
 if __name__ == '__main__':

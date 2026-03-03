@@ -10,18 +10,18 @@ from eval_utils import compare_aligned_data
 from utils import get_project_dir
 
 project_dir = get_project_dir()
-reference_maps = ['ETH', 'GLAD']
+reference_maps = ['ETH', 'GLAD', 'PAULS']
 eval_metrics = {'r2': 'R\u00b2', 'mae': 'Mean Absolute Error', 'mse': 'Mean Squared Error', 'rmse': 'RMSE', 'me': 'Mean Error'}
 os.makedirs('figures', exist_ok=True)
 
 def eval_reference_maps(resolution, eval_metric):
     lidar_coarsened_dir = f'{project_dir}/data/int/lidar/lidar_by_site_32736_{resolution}m'
     sites = sorted(os.listdir(lidar_coarsened_dir))
-    results_by_site = {reference_maps[0]: {}, reference_maps[1]: {}}
+    results_by_site = {reference_maps[i]: {} for i in range(len(reference_maps))}
     results_by_site_plot = []
     labels = []
     preds = []
-    results = {reference_maps[0]: {}, reference_maps[1]: {}}
+    results = {reference_maps[i]: {} for i in range(len(reference_maps))}
     results_plot = []
     interval_bounds = [0, 3, 6, 10, 30]
     num_intervals = len(interval_bounds) - 1
